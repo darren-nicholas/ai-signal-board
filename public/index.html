@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0c0f">
+<title>AI Signal Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0c0f; --surface: #111418; --border: #1e2329;
+    --border-light: #2a3038; --text: #f0f2f4; --text-muted: #8892a0;
+    --text-dim: #4a5568; --green: #34d399; --amber: #fbbf24;
+    --red: #f87171; --blue: #60a5fa; --pink: #f472b6;
+    --orange: #fb923c; --violet: #a78bfa; --cyan: #22d3ee;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  .header { position: sticky; top: 0; z-index: 100; background: rgba(10,12,15,0.93); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 14px 16px 10px; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .logo h1 { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--text); }
+  .logo p { font-size: 10px; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 2px; }
+  .refresh-btn { background: #fff; color: #000; border: none; border-radius: 10px; padding: 8px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 6px; transition: opacity 0.15s; }
+  .refresh-btn.loading { opacity: 0.5; pointer-events: none; }
+  .tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex-shrink: 0; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--text-dim); font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+  .tab.active { background: var(--surface); color: var(--text); }
+  .main { max-width: 680px; margin: 0 auto; padding: 16px 16px 100px; }
+  .search-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; margin-bottom: 14px; transition: border-color 0.15s; }
+  .search-input:focus { border-color: var(--border-light); }
+  .search-input::placeholder { color: var(--text-dim); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 14px; overflow: hidden; }
+  .stat { padding: 12px 8px; text-align: center; border-right: 1px solid var(--border); }
+  .stat:last-child { border-right: none; }
+  .stat-value { font-size: 22px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); }
+  .last-updated { text-align: center; font-size: 11px; color: var(--text-dim); margin-bottom: 14px; }
+  .last-updated span { color: var(--green); }
+  .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .filter-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); width: 58px; flex-shrink: 0; }
+  .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex-shrink: 0; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid var(--border-light); background: transparent; color: var(--text-muted); font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; }
+  .chip.active { background: #fff; color: #000; border-color: #fff; }
+  .filters-section { margin-bottom: 16px; }
+  .cards { display: flex; flex-direction: column; gap: 10px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; border-left-width: 3px; }
+  .card-header { padding: 14px 14px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .card-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
+  .card-badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; border: 1px solid; }
+  .card-date { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+  .card-title { font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--text); margin-bottom: 6px; }
+  .card-summary { font-size: 12px; color: var(--text-muted); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  .card-source { font-size: 11px; color: var(--text-dim); }
+  .expand-hint { font-size: 11px; color: var(--text-dim); }
+  .card-body { padding: 12px 14px 14px; border-top: 1px solid var(--border); display: none; }
+  .card-body.open { display: block; }
+  .card-section { margin-bottom: 12px; }
+  .card-section:last-child { margin-bottom: 0; }
+  .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; margin-bottom: 5px; color: var(--text-dim); }
+  .section-text { font-size: 12px; line-height: 1.65; color: var(--text-muted); }
+  .highlight-box { border-radius: 10px; padding: 10px 12px; border: 1px solid; }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+  .tag { font-size: 10px; background: var(--bg); color: var(--text-dim); padding: 3px 8px; border-radius: 20px; }
+  .card-actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+  .status-select { padding: 6px 10px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border-light); color: var(--text-muted); font-size: 11px; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+  .action-link { font-size: 12px; color: var(--blue); text-decoration: none; margin-left: auto; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .dot-New { background: var(--green); } .dot-Reviewing { background: var(--amber); } .dot-Tested { background: var(--blue); } .dot-Archived { background: var(--text-dim); }
+  .section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; margin-top: 24px; }
+  .section-header:first-child { margin-top: 0; }
+  .section-header h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+  .section-count { font-size: 10px; background: var(--border); color: var(--text-dim); padding: 2px 7px; border-radius: 20px; }
+  .empty { border: 1px dashed var(--border-light); border-radius: 14px; padding: 40px 20px; text-align: center; color: var(--text-dim); font-size: 13px; }
+  .empty-icon { font-size: 28px; margin-bottom: 10px; }
+  .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 12px; color: var(--text-dim); font-size: 13px; }
+  .spinner { width: 24px; height: 24px; border: 2px solid var(--border-light); border-top-color: var(--text-muted); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .priority-High { color: var(--red); background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); }
+  .priority-Medium { color: var(--amber); background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.3); }
+  .priority-Low { color: var(--text-dim); background: rgba(74,85,104,0.2); border-color: rgba(74,85,104,0.3); }
+  .cat-big { border-left-color: #f59e0b; } .cat-model { border-left-color: #8b5cf6; }
+  .cat-capability { border-left-color: #3b82f6; } .cat-agentic { border-left-color: #10b981; }
+  .cat-workflow { border-left-color: #06b6d4; } .cat-hospitality { border-left-color: #f97316; }
+  .cat-coco { border-left-color: #ec4899; } .cat-note { border-left-color: #6b7280; }
+  .cb-big { color: #fbbf24; background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3); }
+  .cb-model { color: #a78bfa; background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.3); }
+  .cb-capability { color: #60a5fa; background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.3); }
+  .cb-agentic { color: #34d399; background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.3); }
+  .cb-workflow { color: #22d3ee; background: rgba(6,182,212,0.12); border-color: rgba(6,182,212,0.3); }
+  .cb-hospitality { color: #fb923c; background: rgba(249,115,22,0.12); border-color: rgba(249,115,22,0.3); }
+  .cb-coco { color: #f472b6; background: rgba(236,72,153,0.12); border-color: rgba(236,72,153,0.3); }
+  .cb-note { color: #9ca3af; background: rgba(107,114,128,0.12); border-color: rgba(107,114,128,0.3); }
+  @media (min-width: 640px) { .main { padding: 20px 24px 80px; } .logo h1 { font-size: 22px; } }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-top">
+    <div class="logo">
+      <h1>AI Signal Board</h1>
+      <p>Personal Intelligence Dashboard</p>
+    </div>
+    <button class="refresh-btn" id="refreshBtn" onclick="triggerFetch()">
+      <span id="refreshIcon">⟳</span> Refresh
+    </button>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="setTab('feed',this)">Feed</button>
+    <button class="tab" onclick="setTab('sections',this)">Sections</button>
+    <button class="tab" onclick="setTab('agentic',this)">Agentic</button>
+    <button class="tab" onclick="setTab('hospitality',this)">Hospitality</button>
+    <button class="tab" onclick="setTab('coco',this)">Coco & Daisy</button>
+  </div>
+</header>
+
+<main class="main">
+  <input class="search-input" type="search" placeholder="Search entries..." id="searchInput" oninput="renderAll()">
+  <div class="stats" id="statsBar"></div>
+  <div class="last-updated" id="lastUpdated"></div>
+  <div class="filters-section" id="filtersSection"></div>
+  <div id="content">
+    <div class="loading-state"><div class="spinner"></div><span>Loading your intelligence feed...</span></div>
+  </div>
+</main>
+
+<script>
+let allCards = [], activeTab = 'feed', lastUpdated = null;
+let filters = { category: 'All', priority: 'All', status: 'All' };
+
+const CAT_MAP = {
+  'Big Move': 'big', 'Model Launch': 'model', 'Capability Update': 'capability',
+  'Agentic Progress': 'agentic', 'Workflow Idea': 'workflow',
+  'Hospitality Relevance': 'hospitality', 'Coco & Daisy': 'coco', 'Note': 'note'
+};
+
+async function loadCards() {
+  try {
+    const res = await fetch('/api/get-cards');
+    const data = await res.json();
+    allCards = data.cards || [];
+    lastUpdated = data.lastUpdated;
+    applyLocalOverrides();
+    renderAll();
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load cards.</p><p style="font-size:11px;margin-top:6px">${e.message}</p><p style="font-size:11px;margin-top:8px">Try hitting Refresh to fetch your first batch of news.</p></div>`;
+    renderStats();
+  }
+}
+
+async function triggerFetch() {
+  const btn = document.getElementById('refreshBtn');
+  const icon = document.getElementById('refreshIcon');
+  btn.classList.add('loading');
+  icon.textContent = '↻';
+  try {
+    const res = await fetch('/api/fetch-news');
+    const data = await res.json();
+    console.log('Fetch result:', data);
+    await new Promise(r => setTimeout(r, 2500));
+    await loadCards();
+  } catch(e) {
+    console.error('Fetch error:', e);
+    alert('Refresh failed: ' + e.message);
+  } finally {
+    btn.classList.remove('loading');
+    icon.textContent = '⟳';
+  }
+}
+
+function getFiltered() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  return allCards.filter(c => {
+    if (c.status === 'Archived' && filters.status !== 'Archived') return false;
+    if (filters.category !== 'All' && c.category !== filters.category) return false;
+    if (filters.priority !== 'All' && c.priority !== filters.priority) return false;
+    if (filters.status !== 'All' && c.status !== filters.status) return false;
+    if (q) return (c.title||'').toLowerCase().includes(q) || (c.summary||'').toLowerCase().includes(q) || (c.tags||[]).some(t=>t.toLowerCase().includes(q));
+    return true;
+  }).sort((a,b) => {
+    const po = {High:0,Medium:1,Low:2};
+    const pd = (po[a.priority]??1)-(po[b.priority]??1);
+    return pd !== 0 ? pd : new Date(b.dateAdded||0)-new Date(a.dateAdded||0);
+  });
+}
+
+function renderAll() {
+  renderStats(); renderLastUpdated(); renderFilters();
+  const f = getFiltered();
+  if (activeTab==='feed') renderFeed(f);
+  else if (activeTab==='sections') renderSections(f);
+  else if (activeTab==='agentic') renderSpecial(f.filter(c=>c.category==='Agentic Progress'),'🤖','Agentic AI & Automation','Tracking the frontier from chatbot to autonomous agent.');
+  else if (activeTab==='hospitality') renderSpecial(f.filter(c=>c.hospitalityRelevance||c.category==='Hospitality Relevance'),'🍽️','Hospitality & Operations','AI relevant to DSquared, T-Mobile LOU, and catering ops.');
+  else if (activeTab==='coco') renderSpecial(f.filter(c=>c.cocoAndDaisy||c.category==='Coco & Daisy'),'🌸','Coco & Daisy','AI tools for your animated YouTube world.');
+}
+
+function renderStats() {
+  const active = allCards.filter(c=>c.status!=='Archived');
+  const s = [
+    {label:'Active', value:active.length, color:'var(--text)'},
+    {label:'High Pri', value:active.filter(c=>c.priority==='High').length, color:'var(--red)'},
+    {label:'New', value:active.filter(c=>c.status==='New').length, color:'var(--green)'},
+    {label:'Testing', value:active.filter(c=>c.status==='Reviewing'||c.status==='Tested').length, color:'var(--amber)'},
+  ];
+  document.getElementById('statsBar').innerHTML = s.map((x,i)=>`<div class="stat"${i===3?' style="border-right:none"':''}><div class="stat-value" style="color:${x.color}">${x.value}</div><div class="stat-label">${x.label}</div></div>`).join('');
+}
+
+function renderLastUpdated() {
+  const el = document.getElementById('lastUpdated');
+  if (!lastUpdated) { el.innerHTML = allCards.length===0 ? 'No cards yet — hit <strong>Refresh</strong> to fetch your first batch' : ''; return; }
+  const d = new Date(lastUpdated);
+  el.innerHTML = `Last updated <span>${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${d.toLocaleDateString([],{month:'short',day:'numeric'})}</span> · Auto-refreshes every 4 hours`;
+}
+
+function renderFilters() {
+  const cats = ['All',...['Big Move','Model Launch','Capability Update','Agentic Progress','Workflow Idea','Hospitality Relevance','Coco & Daisy','Note'].filter(c=>allCards.some(x=>x.category===c))];
+  document.getElementById('filtersSection').innerHTML = `
+    <div class="filter-row"><span class="filter-label">Category</span><div class="chips">${cats.map(c=>`<button class="chip${filters.category===c?' active':''}" onclick="setFilter('category','${c.replace(/'/g,"\\'")}' )">${c}</button>`).join('')}</div></div>
+    <div class="filter-row"><span class="filter-label">Priority</span><div class="chips">${['All','High','Medium','Low'].map(p=>`<button class="chip${filters.priority===p?' active':''}" onclick="setFilter('priority','${p}')">${p}</button>`).join('')}</div></div>
+    <div class="filter-row"><span class="filter-label">Status</span><div class="chips">${['All','New','Reviewing','Tested','Archived'].map(s=>`<button class="chip${filters.status===s?' active':''}" onclick="setFilter('status','${s}')">${s}</button>`).join('')}</div></div>`;
+}
+
+function renderFeed(cards) {
+  document.getElementById('content').innerHTML = cards.length===0
+    ? `<div class="empty"><div class="empty-icon">◎</div><p style="font-weight:600;margin-bottom:6px">No entries yet</p><p style="font-size:12px">Hit Refresh to fetch the latest AI news.</p></div>`
+    : `<div class="cards">${cards.map(cardHTML).join('')}</div>`;
+}
+
+function renderSections(cards) {
+  const sections = [
+    {label:'Daily Brief',icon:'🔥',filter:c=>c.priority==='High'},
+    {label:'Big Moves',icon:'⚡',filter:c=>c.category==='Big Move'},
+    {label:'Model Launches & Updates',icon:'🚀',filter:c=>c.category==='Model Launch'||c.category==='Capability Update'},
+    {label:'Agentic Progress',icon:'🤖',filter:c=>c.category==='Agentic Progress'},
+    {label:'Workflow Ideas',icon:'⚙️',filter:c=>c.category==='Workflow Idea'},
+    {label:'Hospitality',icon:'🍽️',filter:c=>c.hospitalityRelevance||c.category==='Hospitality Relevance'},
+    {label:'Coco & Daisy',icon:'🌸',filter:c=>c.cocoAndDaisy||c.category==='Coco & Daisy'},
+    {label:'Notes',icon:'📝',filter:c=>c.category==='Note'},
+  ];
+  const seen = new Set();
+  document.getElementById('content').innerHTML = sections.map(s=>{
+    const items = cards.filter(s.filter).filter(c=>{ if(seen.has(c.id))return false; seen.add(c.id); return true; });
+    return `<div class="section-header"><span>${s.icon}</span><h2>${s.label}</h2>${items.length?`<span class="section-count">${items.length}</span>`:''}</div>${items.length===0?`<div class="empty" style="padding:16px 20px;margin-bottom:4px"><span style="font-size:12px">No entries yet</span></div>`:`<div class="cards" style="margin-bottom:8px">${items.map(cardHTML).join('')}</div>`}`;
+  }).join('');
+}
+
+function renderSpecial(cards, icon, title, desc) {
+  const unique = [...new Map(cards.map(c=>[c.id,c])).values()];
+  document.getElementById('content').innerHTML = `<div style="margin-bottom:16px"><div style="font-size:24px;margin-bottom:6px">${icon}</div><div style="font-size:15px;font-weight:600;margin-bottom:4px">${title}</div><div style="font-size:12px;color:var(--text-muted)">${desc}</div></div>${unique.length===0?`<div class="empty"><div class="empty-icon">${icon}</div><p style="font-weight:600;margin-bottom:6px">Nothing here yet</p><p style="font-size:12px">Hit Refresh — relevant items will appear automatically.</p></div>`:`<div class="cards">${unique.map(cardHTML).join('')}</div>`}`;
+}
+
+function cardHTML(c) {
+  const key = CAT_MAP[c.category]||'note';
+  return `<div class="card cat-${key}" id="card-${c.id}">
+    <div class="card-header" onclick="toggleCard('${c.id}')">
+      <div class="card-meta">
+        <div class="card-badges">
+          <span class="badge cb-${key}">${c.category||'Note'}</span>
+          <span class="badge priority-${c.priority||'Low'}">${c.priority||'Low'}</span>
+          <span class="dot dot-${c.status||'New'}"></span>
+        </div>
+        <span class="card-date">${fmtDate(c.dateAdded)}</span>
+      </div>
+      <div class="card-title">${c.title||'Untitled'}</div>
+      <div class="card-summary">${c.summary||''}</div>
+      <div class="card-footer">
+        <span class="card-source">${c.company||''} · ${c.source||''}</span>
+        <span class="expand-hint" id="hint-${c.id}">▼ more</span>
+      </div>
+    </div>
+    <div class="card-body" id="body-${c.id}">
+      ${c.whyItMatters?`<div class="card-section"><div class="section-label">Why It Matters</div><div class="section-text">${c.whyItMatters}</div></div>`:''}
+      ${c.shouldITest?`<div class="card-section"><div class="highlight-box" style="background:rgba(52,211,153,0.06);border-color:rgba(52,211,153,0.2)"><div class="section-label" style="color:var(--green)">Should I Test This?</div><div class="section-text" style="color:#a7f3d0">${c.shouldITest}</div></div></div>`:''}
+      ${c.workflowImpact?`<div class="card-section"><div class="section-label">Workflow Impact</div><div class="section-text">${c.workflowImpact}</div></div>`:''}
+      ${c.hospitalityRelevance?`<div class="card-section"><div class="highlight-box" style="background:rgba(249,115,22,0.06);border-color:rgba(249,115,22,0.2)"><div class="section-label" style="color:var(--orange)">Hospitality Relevance</div><div class="section-text" style="color:#fed7aa">${c.hospitalityRelevance}</div></div></div>`:''}
+      ${c.cocoAndDaisy?`<div class="card-section"><div class="highlight-box" style="background:rgba(236,72,153,0.06);border-color:rgba(236,72,153,0.2)"><div class="section-label" style="color:var(--pink)">🌸 Coco & Daisy</div><div class="section-text" style="color:#fbcfe8">${c.cocoAndDaisy}</div></div></div>`:''}
+      ${(c.tags||[]).length?`<div class="tags">${c.tags.map(t=>`<span class="tag">#${t}</span>`).join('')}</div>`:''}
+      <div class="card-actions">
+        <select class="status-select" onchange="updateStatus('${c.id}',this.value)">
+          ${['New','Reviewing','Tested','Archived'].map(s=>`<option${c.status===s?' selected':''}>${s}</option>`).join('')}
+        </select>
+        ${c.externalLink?`<a href="${c.externalLink}" target="_blank" class="action-link">View source ↗</a>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleCard(id) {
+  const body = document.getElementById(`body-${id}`);
+  const hint = document.getElementById(`hint-${id}`);
+  hint.textContent = body.classList.toggle('open') ? '▲ less' : '▼ more';
+}
+
+function updateStatus(id, status) {
+  allCards = allCards.map(c=>c.id===id?{...c,status}:c);
+  saveLocal();
+}
+
+function setTab(tab, el) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderAll();
+}
+
+function setFilter(key, val) { filters[key]=val; renderAll(); }
+
+function fmtDate(d) {
+  if (!d) return '';
+  return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+function saveLocal() {
+  try { localStorage.setItem('signal-status',JSON.stringify(allCards.reduce((a,c)=>{a[c.id]=c.status;return a},{}))); } catch(e){}
+}
+
+function applyLocalOverrides() {
+  try {
+    const o = JSON.parse(localStorage.getItem('signal-status')||'{}');
+    allCards = allCards.map(c=>o[c.id]?{...c,status:o[c.id]}:c);
+  } catch(e){}
+}
+
+loadCards();
+</script>
+</body>
+</html>
