@@ -16,17 +16,22 @@ export default async function handler(req, res) {
     
     let cards = [];
     if (data.result) {
-      let raw = data.result;
-      // Keep unwrapping until we have a real array
-      let attempts = 0;
-      while (typeof raw === "string" && attempts < 5) {
-        try { raw = JSON.parse(raw); } catch(e) { break; }
-        attempts++;
-      }
-      if (Array.isArray(raw)) {
-        cards = raw.filter(c => typeof c === "object" && c !== null && c.title);
-      }
-    }
+  let raw = data.result;
+  let attempts = 0;
+  while (attempts < 6) {
+    if (Array.isArray(raw)) {
+      // Filter to only real card objects
+      const realCards = raw.filter(c => typeof c === "object" && c !== null && c.title);
+      if (realCards.length > 0) { cards = realCards; break; }
+      // Array exists but contains strings — unwrap first element
+      if (typeof raw[0] === "string") { raw = JSON.parse(raw[0]); }
+      else break;
+    } else if (typeof raw === "string") {
+      raw = JSON.parse(raw);
+    } else break;
+    attempts++;
+  }
+}
 
     res.status(200).json({ cards, lastUpdated: new Date().toISOString() });
   } catch (error) {
