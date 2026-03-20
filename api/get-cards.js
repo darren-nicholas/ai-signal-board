@@ -50,4 +50,16 @@ export default async function handler(req, res) {
           const str = challenge.find(x => typeof x === "string" && x.startsWith("{"));
           if (str) challenge = JSON.parse(str);
         }
-        const alreadyIn = cards.some(c => c.id === chall
+        const alreadyIn = cards.some(c => c.id === challenge.id);
+        if (!alreadyIn && challenge.title) cards.unshift(challenge);
+      }
+    } catch(e) {
+      console.error("Challenge fetch error:", e.message);
+    }
+
+    res.status(200).json({ cards, lastUpdated: new Date().toISOString() });
+  } catch (error) {
+    console.error("get-cards error:", error);
+    res.status(500).json({ error: error.message, cards: [] });
+  }
+}
