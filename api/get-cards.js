@@ -16,17 +16,11 @@ export default async function handler(req, res) {
     
     let cards = [];
     if (data.result) {
-      const raw = data.result;
-      // Handle double-stringified JSON
-      if (typeof raw === "string") {
-        const parsed = JSON.parse(raw);
-        if (typeof parsed === "string") {
-          cards = JSON.parse(parsed);
-        } else {
-          cards = parsed;
-        }
-      } else {
-        cards = raw;
+      try {
+        cards = JSON.parse(data.result);
+        if (!Array.isArray(cards)) cards = [];
+      } catch(e) {
+        cards = [];
       }
     }
 
