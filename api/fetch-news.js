@@ -98,9 +98,11 @@ ${JSON.stringify(articles, null, 2)}`;
   }
 
   const data = await response.json();
-  const text = data.content[0].text.trim();
-  const clean = text.replace(/```json|```/g, "").trim();
-  return JSON.parse(clean);
+const text = data.content[0].text.trim();
+// Strip markdown code blocks and find JSON array
+const jsonMatch = text.match(/\[[\s\S]*\]/);
+if (!jsonMatch) throw new Error("No JSON array found in Claude response");
+return JSON.parse(jsonMatch[0]);
 }
 
 async function saveToUpstash(cards) {
