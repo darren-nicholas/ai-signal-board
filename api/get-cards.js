@@ -13,7 +13,22 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-    const cards = JSON.parse(data.result || "[]");
+    
+    let cards = [];
+    if (data.result) {
+      const raw = data.result;
+      // Handle double-stringified JSON
+      if (typeof raw === "string") {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === "string") {
+          cards = JSON.parse(parsed);
+        } else {
+          cards = parsed;
+        }
+      } else {
+        cards = raw;
+      }
+    }
 
     res.status(200).json({ cards, lastUpdated: new Date().toISOString() });
   } catch (error) {
