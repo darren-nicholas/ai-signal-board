@@ -16,11 +16,15 @@ export default async function handler(req, res) {
     
     let cards = [];
     if (data.result) {
-      try {
-        cards = JSON.parse(data.result);
-        if (!Array.isArray(cards)) cards = [];
-      } catch(e) {
-        cards = [];
+      let raw = data.result;
+      // Keep unwrapping until we have a real array
+      let attempts = 0;
+      while (typeof raw === "string" && attempts < 5) {
+        try { raw = JSON.parse(raw); } catch(e) { break; }
+        attempts++;
+      }
+      if (Array.isArray(raw)) {
+        cards = raw.filter(c => typeof c === "object" && c !== null && c.title);
       }
     }
 
