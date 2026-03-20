@@ -46,6 +46,15 @@ export default async function handler(req, res) {
     attempts++;
   }
   // Handle array wrapper ["key", "data"]
+ if (challengeData.result) {
+  let challenge = challengeData.result;
+  // Unwrap nested strings
+  let attempts = 0;
+  while (typeof challenge === "string" && attempts < 5) {
+    challenge = JSON.parse(challenge);
+    attempts++;
+  }
+  // Handle array wrapper ["key", "data"]
   if (Array.isArray(challenge)) {
     const str = challenge.find(x => typeof x === "string" && x.startsWith("{"));
     if (str) challenge = JSON.parse(str);
