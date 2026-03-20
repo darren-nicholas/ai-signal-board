@@ -49,7 +49,7 @@ async function analyzeWithClaude(articles) {
 
 Analyze these recent AI news articles and return a JSON array of the most important ones. Focus on:
 - Agentic AI and automation breakthroughs
-- Model launches and capability updates  
+- Model launches and capability updates
 - Hospitality and restaurant operations applications
 - Animation and creative AI tools relevant to Coco & Daisy production
 - Major industry moves (acquisitions, partnerships, funding)
@@ -72,6 +72,7 @@ For each article worth tracking, return this exact JSON structure with NO markdo
   "priority": "High|Medium|Low",
   "tags": ["tag1", "tag2"],
   "externalLink": "original article URL",
+  "accessCost": "Estimated cost to access this tool or feature. Use exactly one of: Free, Freemium, Pro ~$X/mo, Enterprise, or N/A if this is news and not a product",
   "status": "New"
 }
 
@@ -132,12 +133,13 @@ Return ONLY this JSON object with no other text:
   "category": "Note",
   "source": "Daily Challenge",
   "company": "Other",
-  "summary": "What you'll build today and why it matters",
+  "summary": "What you will build today and why it matters",
   "whyItMatters": "How this connects to your actual projects and learning journey",
   "shouldITest": "Paste this exact prompt into a new Claude conversation to start: [include the starter prompt]",
   "workflowImpact": "What skill this builds and how it compounds with what you already know",
   "hospitalityRelevance": "",
   "cocoAndDaisy": "",
+  "accessCost": "Free",
   "priority": "Medium",
   "tags": ["daily-challenge", "learning"],
   "externalLink": "",
@@ -215,23 +217,21 @@ async function saveDailyChallenge(challenge) {
   const token = process.env.KV_REST_API_TOKEN;
   const today = new Date().toISOString().slice(0, 10);
 
-  // Check if today's challenge already exists
   try {
     const response = await fetch(`${url}/get/daily-challenge-${today}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await response.json();
-    if (data.result) return JSON.parse(data.result); // Already exists
+    if (data.result) return JSON.parse(data.result);
   } catch (e) {}
 
-  // Save new challenge
   await fetch(`${url}/set/daily-challenge-${today}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify([`daily-challenge-${today}`, JSON.stringify(challenge)]),
+    body: JSON.stringify([JSON.stringify(challenge)]),
   });
 
   return challenge;
@@ -241,7 +241,6 @@ export default async function handler(req, res) {
   try {
     console.log("Starting news fetch...");
 
-    // Fetch all RSS feeds
     const allArticles = [];
     for (const feed of FEEDS) {
       const items = await fetchFeed(feed.url);
@@ -253,22 +252,20 @@ export default async function handler(req, res) {
       return res.status(200).json({ message: "No articles fetched", added: 0 });
     }
 
-    // Analyze with Claude
     const cards = await analyzeWithClaude(allArticles);
     console.log(`Claude returned ${cards.length} cards`);
 
-    // Generate daily challenge (only once per day)
     const today = new Date().toISOString().slice(0, 10);
     const url = process.env.KV_REST_API_URL;
     const token = process.env.KV_REST_API_TOKEN;
-    
+
     let challengeAdded = false;
     try {
       const existingCheck = await fetch(`${url}/get/daily-challenge-${today}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const existingData = await existingCheck.json();
-      
+
       if (!existingData.result) {
         const challenge = await generateDailyChallenge();
         if (challenge) {
@@ -281,7 +278,6 @@ export default async function handler(req, res) {
       console.error("Challenge error:", e.message);
     }
 
-    // Save cards
     const result = await saveToUpstash(cards);
     console.log(`Saved: ${result.added} new, ${result.total} total`);
 
