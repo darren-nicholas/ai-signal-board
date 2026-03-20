@@ -30,45 +30,24 @@ export default async function handler(req, res) {
       }
     }
 
-    // Get today's daily challenge and add if not already in cards
+    // Get today's daily challenge
     const today = new Date().toISOString().slice(0, 10);
     try {
       const challengeRes = await fetch(`${url}/get/daily-challenge-${today}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const challengeData = await challengeRes.json();
- if (challengeData.result) {
-  let challenge = challengeData.result;
-  // Unwrap nested strings
-  let attempts = 0;
-  while (typeof challenge === "string" && attempts < 5) {
-    challenge = JSON.parse(challenge);
-    attempts++;
-  }
-  // Handle array wrapper ["key", "data"]
- if (challengeData.result) {
-  let challenge = challengeData.result;
-  // Unwrap nested strings
-  let attempts = 0;
-  while (typeof challenge === "string" && attempts < 5) {
-    challenge = JSON.parse(challenge);
-    attempts++;
-  }
-  // Handle array wrapper ["key", "data"]
-  if (Array.isArray(challenge)) {
-    const str = challenge.find(x => typeof x === "string" && x.startsWith("{"));
-    if (str) challenge = JSON.parse(str);
-  }
-        const alreadyIn = cards.some(c => c.id === challenge.id);
-        if (!alreadyIn && challenge.title) cards.unshift(challenge);
-      }
-    } catch(e) {
-      console.error("Challenge fetch error:", e.message);
-    }
-
-    res.status(200).json({ cards, lastUpdated: new Date().toISOString() });
-  } catch (error) {
-    console.error("get-cards error:", error);
-    res.status(500).json({ error: error.message, cards: [] });
-  }
-}
+      if (challengeData.result) {
+        let challenge = challengeData.result;
+        // Unwrap nested strings
+        let attempts = 0;
+        while (typeof challenge === "string" && attempts < 5) {
+          challenge = JSON.parse(challenge);
+          attempts++;
+        }
+        // Handle array wrapper like ["key", "{...}"]
+        if (Array.isArray(challenge)) {
+          const str = challenge.find(x => typeof x === "string" && x.startsWith("{"));
+          if (str) challenge = JSON.parse(str);
+        }
+        const alreadyIn = cards.some(c => c.id === chall
