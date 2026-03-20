@@ -204,7 +204,7 @@ async function saveToUpstash(cards) {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(["signal-cards", JSON.stringify(merged)]),
+    body: JSON.stringify([JSON.stringify(merged)]),
   });
 
   return { added: newCards.length, total: merged.length };
