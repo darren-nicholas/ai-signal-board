@@ -103,7 +103,140 @@
   .cb-hospitality { color: #fb923c; background: rgba(249,115,22,0.12); border-color: rgba(249,115,22,0.3); }
   .cb-coco { color: #f472b6; background: rgba(236,72,153,0.12); border-color: rgba(236,72,153,0.3); }
   .cb-note { color: #9ca3af; background: rgba(107,114,128,0.12); border-color: rgba(107,114,128,0.3); }
-  @media (min-width: 640px) { .main { padding: 20px 24px 80px; } .logo h1 { font-size: 22px; } }
+
+  .challenge-wrap { display: flex; flex-direction: column; gap: 14px; }
+  .challenge-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .challenge-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .challenge-title-row h2 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .challenge-title-row p {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .challenge-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .challenge-input,
+  .challenge-textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+  }
+  .challenge-input:focus,
+  .challenge-textarea:focus {
+    border-color: var(--blue);
+  }
+  .challenge-input::placeholder,
+  .challenge-textarea::placeholder {
+    color: var(--text-dim);
+  }
+  .challenge-textarea {
+    min-height: 92px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+  .challenge-save {
+    background: #fff;
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    align-self: flex-start;
+  }
+  .challenge-status {
+    min-height: 18px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .challenge-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .challenge-entry {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    border-left: 3px solid var(--blue);
+  }
+  .challenge-entry-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .challenge-entry-title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+  .challenge-entry-date {
+    font-size: 11px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .challenge-entry-block {
+    margin-top: 10px;
+  }
+  .challenge-entry-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: var(--text-dim);
+  }
+  .challenge-entry-text {
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--text-muted);
+  }
+  .challenge-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+  }
+  .challenge-tag {
+    font-size: 10px;
+    background: var(--bg);
+    color: var(--text-dim);
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+
+  @media (min-width: 640px) {
+    .main { padding: 20px 24px 80px; }
+    .logo h1 { font-size: 22px; }
+  }
 </style>
 </head>
 <body>
@@ -124,6 +257,7 @@
     <button class="tab" onclick="setTab('agentic',this)">Agentic</button>
     <button class="tab" onclick="setTab('hospitality',this)">Hospitality</button>
     <button class="tab" onclick="setTab('coco',this)">Coco & Daisy</button>
+    <button class="tab" onclick="setTab('challenges',this)">Challenge Log</button>
   </div>
 </header>
 
@@ -139,6 +273,7 @@
 
 <script>
 let allCards = [], activeTab = 'feed', lastUpdated = null;
+let challengeEntries = [], challengeLastUpdated = null;
 let filters = { category: 'All', priority: 'All', status: 'All' };
 
 const CAT_MAP = {
@@ -168,8 +303,22 @@ async function loadCards() {
     applyLocalOverrides();
     renderAll();
   } catch(e) {
-    document.getElementById('content').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load cards.</p><p style="font-size:11px;margin-top:6px">${e.message}</p><p style="font-size:11px;margin-top:8px">Try hitting Refresh to fetch your first batch of news.</p></div>`;
+    document.getElementById('content').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load cards.</p><p style="font-size:11px;margin-top:6px">${escapeHtml(e.message)}</p><p style="font-size:11px;margin-top:8px">Try hitting Refresh to fetch your first batch of news.</p></div>`;
     renderStats();
+  }
+}
+
+async function loadChallenges(force = false) {
+  if (challengeEntries.length > 0 && !force) return;
+
+  try {
+    const res = await fetch('/api/get-challenges');
+    const data = await res.json();
+    challengeEntries = Array.isArray(data.entries) ? data.entries : [];
+    challengeLastUpdated = data.lastUpdated || new Date().toISOString();
+  } catch (e) {
+    console.error('Challenge load error:', e);
+    challengeEntries = [];
   }
 }
 
@@ -209,8 +358,31 @@ function getFiltered() {
   });
 }
 
+function getFilteredChallenges() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  return challengeEntries.filter(entry => {
+    if (!q) return true;
+    return (
+      (entry.title || '').toLowerCase().includes(q) ||
+      (entry.prompt || '').toLowerCase().includes(q) ||
+      (entry.result || '').toLowerCase().includes(q) ||
+      (entry.takeaway || '').toLowerCase().includes(q) ||
+      (entry.tags || []).some(tag => tag.toLowerCase().includes(q))
+    );
+  }).sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+}
+
 function renderAll() {
-  renderStats(); renderLastUpdated(); renderFilters();
+  renderStats();
+  renderLastUpdated();
+  renderFilters();
+  updateSearchPlaceholder();
+
+  if (activeTab === 'challenges') {
+    renderChallengesTab();
+    return;
+  }
+
   const f = getFiltered();
   if (activeTab==='feed') renderFeed(f);
   else if (activeTab==='sections') renderSections(f);
@@ -220,6 +392,20 @@ function renderAll() {
 }
 
 function renderStats() {
+  const statsBar = document.getElementById('statsBar');
+
+  if (activeTab === 'challenges') {
+    const reviewed = challengeEntries.filter(e => (e.tags || []).length > 0).length;
+    statsBar.style.display = 'grid';
+    statsBar.innerHTML = [
+      { label: 'Entries', value: challengeEntries.length, color: 'var(--text)' },
+      { label: 'This Week', value: challengeEntries.filter(isThisWeek).length, color: 'var(--green)' },
+      { label: 'Tagged', value: reviewed, color: 'var(--blue)' },
+      { label: 'Today', value: challengeEntries.filter(isToday).length, color: 'var(--amber)' }
+    ].map((x,i)=>`<div class="stat"${i===3?' style="border-right:none"':''}><div class="stat-value" style="color:${x.color}">${x.value}</div><div class="stat-label">${x.label}</div></div>`).join('');
+    return;
+  }
+
   const active = allCards.filter(c=>c.status!=='Archived');
   const s = [
     {label:'Active', value:active.length, color:'var(--text)'},
@@ -227,22 +413,50 @@ function renderStats() {
     {label:'New', value:active.filter(c=>c.status==='New').length, color:'var(--green)'},
     {label:'Testing', value:active.filter(c=>c.status==='Reviewing'||c.status==='Tested').length, color:'var(--amber)'},
   ];
-  document.getElementById('statsBar').innerHTML = s.map((x,i)=>`<div class="stat"${i===3?' style="border-right:none"':''}><div class="stat-value" style="color:${x.color}">${x.value}</div><div class="stat-label">${x.label}</div></div>`).join('');
+  statsBar.style.display = 'grid';
+  statsBar.innerHTML = s.map((x,i)=>`<div class="stat"${i===3?' style="border-right:none"':''}><div class="stat-value" style="color:${x.color}">${x.value}</div><div class="stat-label">${x.label}</div></div>`).join('');
 }
 
 function renderLastUpdated() {
   const el = document.getElementById('lastUpdated');
-  if (!lastUpdated) { el.innerHTML = allCards.length===0 ? 'No cards yet — hit <strong>Refresh</strong> to fetch your first batch' : ''; return; }
+
+  if (activeTab === 'challenges') {
+    if (!challengeLastUpdated && challengeEntries.length === 0) {
+      el.innerHTML = 'Log your prompting experiments here ... entries persist to your board';
+      return;
+    }
+    const d = new Date(challengeLastUpdated || new Date().toISOString());
+    el.innerHTML = `Challenge log <span>${challengeEntries.length} entries</span> · Updated ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${d.toLocaleDateString([],{month:'short',day:'numeric'})}`;
+    return;
+  }
+
+  if (!lastUpdated) {
+    el.innerHTML = allCards.length===0 ? 'No cards yet — hit <strong>Refresh</strong> to fetch your first batch' : '';
+    return;
+  }
   const d = new Date(lastUpdated);
   el.innerHTML = `Last updated <span>${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${d.toLocaleDateString([],{month:'short',day:'numeric'})}</span> · Auto-refreshes every 4 hours`;
 }
 
 function renderFilters() {
+  const filtersEl = document.getElementById('filtersSection');
+
+  if (activeTab === 'challenges') {
+    filtersEl.style.display = 'none';
+    return;
+  }
+
+  filtersEl.style.display = 'block';
   const cats = ['All',...['Big Move','Model Launch','Capability Update','Agentic Progress','Workflow Idea','Hospitality Relevance','Coco & Daisy','Note'].filter(c=>allCards.some(x=>x.category===c))];
-  document.getElementById('filtersSection').innerHTML = `
+  filtersEl.innerHTML = `
     <div class="filter-row"><span class="filter-label">Category</span><div class="chips">${cats.map(c=>`<button class="chip${filters.category===c?' active':''}" onclick="setFilter('category',${JSON.stringify(c)})">${c}</button>`).join('')}</div></div>
     <div class="filter-row"><span class="filter-label">Priority</span><div class="chips">${['All','High','Medium','Low'].map(p=>`<button class="chip${filters.priority===p?' active':''}" onclick="setFilter('priority','${p}')">${p}</button>`).join('')}</div></div>
     <div class="filter-row"><span class="filter-label">Status</span><div class="chips">${['All','New','Reviewing','Tested','Archived'].map(s=>`<button class="chip${filters.status===s?' active':''}" onclick="setFilter('status','${s}')">${s}</button>`).join('')}</div></div>`;
+}
+
+function updateSearchPlaceholder() {
+  const input = document.getElementById('searchInput');
+  input.placeholder = activeTab === 'challenges' ? 'Search challenge log...' : 'Search entries...';
 }
 
 function renderFeed(cards) {
@@ -275,6 +489,102 @@ function renderSpecial(cards, icon, title, desc) {
   document.getElementById('content').innerHTML = `<div style="margin-bottom:16px"><div style="font-size:24px;margin-bottom:6px">${icon}</div><div style="font-size:15px;font-weight:600;margin-bottom:4px">${title}</div><div style="font-size:12px;color:var(--text-muted)">${desc}</div></div>${unique.length===0?`<div class="empty"><div class="empty-icon">${icon}</div><p style="font-weight:600;margin-bottom:6px">Nothing here yet</p><p style="font-size:12px">Hit Refresh — relevant items will appear automatically.</p></div>`:`<div class="cards">${unique.map(cardHTML).join('')}</div>`}`;
 }
 
+function renderChallengesTab() {
+  const entries = getFilteredChallenges();
+
+  document.getElementById('content').innerHTML = `
+    <div class="challenge-wrap">
+      <div class="challenge-panel">
+        <div class="challenge-title-row">
+          <div>
+            <h2>Log an AI Challenge</h2>
+            <p>Capture prompting tests, failures, takeaways, and next experiments.</p>
+          </div>
+        </div>
+
+        <form class="challenge-form" onsubmit="saveChallenge(event)">
+          <input id="challenge-title" class="challenge-input" type="text" placeholder="Challenge title" required>
+          <textarea id="challenge-prompt" class="challenge-textarea" placeholder="What prompt, workflow, or experiment did you try?"></textarea>
+          <textarea id="challenge-result" class="challenge-textarea" placeholder="What happened?"></textarea>
+          <textarea id="challenge-takeaway" class="challenge-textarea" placeholder="What did you learn, or what should you test next?"></textarea>
+          <input id="challenge-tags" class="challenge-input" type="text" placeholder="tags, comma, separated">
+          <button type="submit" class="challenge-save">Save Entry</button>
+          <div id="challenge-status" class="challenge-status"></div>
+        </form>
+      </div>
+
+      <div class="section-header">
+        <span>🧪</span>
+        <h2>Recent Experiments</h2>
+        ${entries.length ? `<span class="section-count">${entries.length}</span>` : ''}
+      </div>
+
+      ${
+        entries.length === 0
+          ? `<div class="empty"><div class="empty-icon">📝</div><p style="font-weight:600;margin-bottom:6px">No challenge entries yet</p><p style="font-size:12px">Use this tab to build a living log of prompting experiments.</p></div>`
+          : `<div class="challenge-list">${entries.map(challengeHTML).join('')}</div>`
+      }
+    </div>
+  `;
+}
+
+function challengeHTML(entry) {
+  return `
+    <div class="challenge-entry" id="challenge-${entry.id}">
+      <div class="challenge-entry-head">
+        <div class="challenge-entry-title">${escapeHtml(entry.title || 'Untitled')}</div>
+        <div class="challenge-entry-date">${fmtDateTime(entry.createdAt)}</div>
+      </div>
+
+      ${entry.prompt ? `<div class="challenge-entry-block"><div class="challenge-entry-label">Prompt / Setup</div><div class="challenge-entry-text">${escapeHtml(entry.prompt)}</div></div>` : ''}
+      ${entry.result ? `<div class="challenge-entry-block"><div class="challenge-entry-label">Result</div><div class="challenge-entry-text">${escapeHtml(entry.result)}</div></div>` : ''}
+      ${entry.takeaway ? `<div class="challenge-entry-block"><div class="challenge-entry-label">Takeaway</div><div class="challenge-entry-text">${escapeHtml(entry.takeaway)}</div></div>` : ''}
+
+      ${(entry.tags || []).length ? `<div class="challenge-tags">${entry.tags.map(t => `<span class="challenge-tag">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+    </div>
+  `;
+}
+
+async function saveChallenge(event) {
+  event.preventDefault();
+
+  const statusEl = document.getElementById('challenge-status');
+  const titleEl = document.getElementById('challenge-title');
+  const promptEl = document.getElementById('challenge-prompt');
+  const resultEl = document.getElementById('challenge-result');
+  const takeawayEl = document.getElementById('challenge-takeaway');
+  const tagsEl = document.getElementById('challenge-tags');
+
+  statusEl.textContent = 'Saving entry...';
+
+  try {
+    const payload = {
+      title: titleEl.value,
+      prompt: promptEl.value,
+      result: resultEl.value,
+      takeaway: takeawayEl.value,
+      tags: tagsEl.value
+    };
+
+    const res = await fetch('/api/save-challenge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Failed to save challenge');
+
+    challengeEntries.unshift(data.entry);
+    challengeLastUpdated = new Date().toISOString();
+    renderAll();
+  } catch (e) {
+    console.error('Challenge save error:', e);
+    statusEl.textContent = 'Failed to save entry.';
+  }
+}
+
 function cardHTML(c) {
   const key = CAT_MAP[c.category]||'note';
   const cost = costBadge(c.accessCost);
@@ -282,34 +592,34 @@ function cardHTML(c) {
     <div class="card-header" onclick="toggleCard('${c.id}')">
       <div class="card-meta">
         <div class="card-meta-left">
-          <span class="badge cb-${key}">${c.category||'Note'}</span>
-          <span class="badge priority-${c.priority||'Low'}">${c.priority||'Low'}</span>
-          <span class="dot dot-${c.status||'New'}"></span>
+          <span class="badge cb-${key}">${escapeHtml(c.category||'Note')}</span>
+          <span class="badge priority-${escapeHtml(c.priority||'Low')}">${escapeHtml(c.priority||'Low')}</span>
+          <span class="dot dot-${escapeHtml(c.status||'New')}"></span>
         </div>
         <div class="card-meta-right">
           ${cost}
           <span class="card-date">${fmtDate(c.dateAdded)}</span>
         </div>
       </div>
-      <div class="card-title">${c.title||'Untitled'}</div>
-      <div class="card-summary">${c.summary||''}</div>
+      <div class="card-title">${escapeHtml(c.title||'Untitled')}</div>
+      <div class="card-summary">${escapeHtml(c.summary||'')}</div>
       <div class="card-footer">
-        <span class="card-source">${c.company||''} · ${c.source||''}</span>
+        <span class="card-source">${escapeHtml(c.company||'')}${c.company && c.source ? ' · ' : ''}${escapeHtml(c.source||'')}</span>
         <span class="expand-hint" id="hint-${c.id}">▼ more</span>
       </div>
     </div>
     <div class="card-body" id="body-${c.id}">
-      ${c.whyItMatters?`<div class="card-section"><div class="section-label">Why It Matters</div><div class="section-text">${c.whyItMatters}</div></div>`:''}
-      ${c.shouldITest?`<div class="card-section"><div class="highlight-box" style="background:rgba(52,211,153,0.06);border-color:rgba(52,211,153,0.2)"><div class="section-label" style="color:var(--green)">Should I Test This?</div><div class="section-text" style="color:#a7f3d0">${c.shouldITest}</div></div></div>`:''}
-      ${c.workflowImpact?`<div class="card-section"><div class="section-label">Workflow Impact</div><div class="section-text">${c.workflowImpact}</div></div>`:''}
-      ${c.hospitalityRelevance?`<div class="card-section"><div class="highlight-box" style="background:rgba(249,115,22,0.06);border-color:rgba(249,115,22,0.2)"><div class="section-label" style="color:var(--orange)">Hospitality Relevance</div><div class="section-text" style="color:#fed7aa">${c.hospitalityRelevance}</div></div></div>`:''}
-      ${c.cocoAndDaisy?`<div class="card-section"><div class="highlight-box" style="background:rgba(236,72,153,0.06);border-color:rgba(236,72,153,0.2)"><div class="section-label" style="color:var(--pink)">🌸 Coco & Daisy</div><div class="section-text" style="color:#fbcfe8">${c.cocoAndDaisy}</div></div></div>`:''}
-      ${(c.tags||[]).length?`<div class="tags">${c.tags.map(t=>`<span class="tag">#${t}</span>`).join('')}</div>`:''}
+      ${c.whyItMatters?`<div class="card-section"><div class="section-label">Why It Matters</div><div class="section-text">${escapeHtml(c.whyItMatters)}</div></div>`:''}
+      ${c.shouldITest?`<div class="card-section"><div class="highlight-box" style="background:rgba(52,211,153,0.06);border-color:rgba(52,211,153,0.2)"><div class="section-label" style="color:var(--green)">Should I Test This?</div><div class="section-text" style="color:#a7f3d0">${escapeHtml(c.shouldITest)}</div></div></div>`:''}
+      ${c.workflowImpact?`<div class="card-section"><div class="section-label">Workflow Impact</div><div class="section-text">${escapeHtml(c.workflowImpact)}</div></div>`:''}
+      ${c.hospitalityRelevance?`<div class="card-section"><div class="highlight-box" style="background:rgba(249,115,22,0.06);border-color:rgba(249,115,22,0.2)"><div class="section-label" style="color:var(--orange)">Hospitality Relevance</div><div class="section-text" style="color:#fed7aa">${escapeHtml(c.hospitalityRelevance)}</div></div></div>`:''}
+      ${c.cocoAndDaisy?`<div class="card-section"><div class="highlight-box" style="background:rgba(236,72,153,0.06);border-color:rgba(236,72,153,0.2)"><div class="section-label" style="color:var(--pink)">🌸 Coco & Daisy</div><div class="section-text" style="color:#fbcfe8">${escapeHtml(c.cocoAndDaisy)}</div></div></div>`:''}
+      ${(c.tags||[]).length?`<div class="tags">${c.tags.map(t=>`<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>`:''}
       <div class="card-actions">
         <select class="status-select" onchange="updateStatus('${c.id}',this.value)">
           ${['New','Reviewing','Tested','Archived'].map(s=>`<option${c.status===s?' selected':''}>${s}</option>`).join('')}
         </select>
-        ${c.externalLink?`<a href="${c.externalLink}" target="_blank" class="action-link">View source ↗</a>`:''}
+        ${c.externalLink?`<a href="${escapeAttr(c.externalLink)}" target="_blank" class="action-link">View source ↗</a>`:''}
       </div>
     </div>
   </div>`;
@@ -326,22 +636,56 @@ function updateStatus(id, status) {
   saveLocal();
 }
 
-function setTab(tab, el) {
+async function setTab(tab, el) {
   activeTab = tab;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
+
+  if (tab === 'challenges') {
+    await loadChallenges();
+  }
+
   renderAll();
 }
 
-function setFilter(key, val) { filters[key]=val; renderAll(); }
+function setFilter(key, val) {
+  filters[key]=val;
+  renderAll();
+}
 
 function fmtDate(d) {
   if (!d) return '';
   return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
 }
 
+function fmtDateTime(d) {
+  if (!d) return '';
+  const date = new Date(d);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' +
+         date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function isToday(entry) {
+  if (!entry.createdAt) return false;
+  const d = new Date(entry.createdAt);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() &&
+         d.getMonth() === now.getMonth() &&
+         d.getDate() === now.getDate();
+}
+
+function isThisWeek(entry) {
+  if (!entry.createdAt) return false;
+  const now = new Date();
+  const d = new Date(entry.createdAt);
+  const diff = now - d;
+  return diff >= 0 && diff <= 7 * 24 * 60 * 60 * 1000;
+}
+
 function saveLocal() {
-  try { localStorage.setItem('signal-status',JSON.stringify(allCards.reduce((a,c)=>{a[c.id]=c.status;return a},{}))); } catch(e){}
+  try {
+    localStorage.setItem('signal-status', JSON.stringify(allCards.reduce((a,c)=>{a[c.id]=c.status;return a},{})));
+  } catch(e){}
 }
 
 function applyLocalOverrides() {
@@ -349,6 +693,24 @@ function applyLocalOverrides() {
     const o = JSON.parse(localStorage.getItem('signal-status')||'{}');
     allCards = allCards.map(c=>o[c.id]?{...c,status:o[c.id]}:c);
   } catch(e){}
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+    .replace(/\n/g, '<br>');
+}
+
+function escapeAttr(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 loadCards();
