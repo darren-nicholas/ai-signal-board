@@ -37,9 +37,19 @@ export default async function handler(req, res) {
         headers: { Authorization: `Bearer ${token}` },
       });
       const challengeData = await challengeRes.json();
-      if (challengeData.result) {
-        let challenge = challengeData.result;
-        if (typeof challenge === "string") challenge = JSON.parse(challenge);
+ if (challengeData.result) {
+  let challenge = challengeData.result;
+  // Unwrap nested strings
+  let attempts = 0;
+  while (typeof challenge === "string" && attempts < 5) {
+    challenge = JSON.parse(challenge);
+    attempts++;
+  }
+  // Handle array wrapper ["key", "data"]
+  if (Array.isArray(challenge)) {
+    const str = challenge.find(x => typeof x === "string" && x.startsWith("{"));
+    if (str) challenge = JSON.parse(str);
+  }
         const alreadyIn = cards.some(c => c.id === challenge.id);
         if (!alreadyIn && challenge.title) cards.unshift(challenge);
       }
