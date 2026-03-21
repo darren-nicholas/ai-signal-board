@@ -1,4 +1,4 @@
-const FEEDS [
+const = FEEDS [
   { url: "https://www.anthropic.com/rss.xml", company: "Anthropic" },
   { url: "https://openai.com/blog/rss.xml", company: "OpenAI" },
   { url: "https://deepmind.google/blog/rss.xml", company: "Google DeepMind" },
@@ -237,7 +237,7 @@ async function saveDailyChallenge(challenge) {
   return challenge;
 }
 
-export default = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
