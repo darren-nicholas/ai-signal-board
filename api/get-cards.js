@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -7,7 +7,6 @@ export default async function handler(req, res) {
     const url = process.env.KV_REST_API_URL;
     const token = process.env.KV_REST_API_TOKEN;
 
-    // Get main cards
     const response = await fetch(`${url}/get/signal-cards`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -30,7 +29,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Get today's daily challenge
     const today = new Date().toISOString().slice(0, 10);
     try {
       const challengeRes = await fetch(`${url}/get/daily-challenge-${today}`, {
@@ -39,13 +37,11 @@ export default async function handler(req, res) {
       const challengeData = await challengeRes.json();
       if (challengeData.result) {
         let challenge = challengeData.result;
-        // Unwrap nested strings
         let attempts = 0;
         while (typeof challenge === "string" && attempts < 5) {
           challenge = JSON.parse(challenge);
           attempts++;
         }
-        // Handle array wrapper like ["key", "{...}"]
         if (Array.isArray(challenge)) {
           const str = challenge.find(x => typeof x === "string" && x.startsWith("{"));
           if (str) challenge = JSON.parse(str);
@@ -62,4 +58,4 @@ export default async function handler(req, res) {
     console.error("get-cards error:", error);
     res.status(500).json({ error: error.message, cards: [] });
   }
-}
+};
