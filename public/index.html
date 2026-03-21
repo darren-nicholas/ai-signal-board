@@ -328,10 +328,19 @@ async function triggerFetch() {
   btn.classList.add('loading');
   icon.textContent = '↻';
   try {
-    const res = await fetch('/api/fetch-news');
-    const data = await res.json();
-    console.log('Fetch result:', data);
-    await new Promise(r => setTimeout(r, 3000));
+    const [newsRes, challengeRes] = await Promise.allSettled([
+      fetch('/api/fetch-news'),
+      fetch('/api/fetch-challenge')
+    ]);
+    if (newsRes.status === 'fulfilled') {
+      const data = await newsRes.value.json();
+      console.log('News fetch result:', data);
+    }
+    if (challengeRes.status === 'fulfilled') {
+      const data = await challengeRes.value.json();
+      console.log('Challenge result:', data);
+    }
+    await new Promise(r => setTimeout(r, 2000));
     await loadCards();
     renderAll();
   } catch(e) {
@@ -339,6 +348,8 @@ async function triggerFetch() {
   } finally {
     btn.classList.remove('loading');
     icon.textContent = '⟳';
+  }
+}
   }
 }
 
