@@ -1,4 +1,4 @@
-const FEEDS = [
+const FEEDS [
   { url: "https://www.anthropic.com/rss.xml", company: "Anthropic" },
   { url: "https://openai.com/blog/rss.xml", company: "OpenAI" },
   { url: "https://deepmind.google/blog/rss.xml", company: "Google DeepMind" },
