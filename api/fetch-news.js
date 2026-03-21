@@ -1,4 +1,4 @@
-const = FEEDS [
+const FEEDS = [
   { url: "https://www.anthropic.com/rss.xml", company: "Anthropic" },
   { url: "https://openai.com/blog/rss.xml", company: "OpenAI" },
   { url: "https://deepmind.google/blog/rss.xml", company: "Google DeepMind" },
@@ -13,7 +13,7 @@ async function fetchFeed(feedUrl) {
   try {
     const res = await fetch(feedUrl, {
       headers: { "User-Agent": "AI-Signal-Board/1.0" },
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return [];
     const xml = await res.text();
@@ -32,7 +32,7 @@ async function fetchFeed(feedUrl) {
       const pubDate = get("pubDate");
       if (title && link) items.push({ title, link, description, pubDate });
     }
-    return items.slice(0, 5);
+    return items.slice(0, 4);
   } catch (e) {
     console.error(`Feed error ${feedUrl}:`, e.message);
     return [];
@@ -67,12 +67,12 @@ For each article worth tracking, return this exact JSON structure with NO markdo
   "whyItMatters": "why this matters specifically to Darren given his context above",
   "shouldITest": "one specific actionable experiment Darren could try this week, or empty string",
   "workflowImpact": "how this could change Darren's daily work or DSquared operations",
-  "hospitalityRelevance": "specific hospitality application — be specific about restaurants, catering, corporate dining. Empty string if not relevant.",
-  "cocoAndDaisy": "specific relevance to animated YouTube production — character design, scripting, voice, animation tools. Empty string if not relevant.",
+  "hospitalityRelevance": "specific hospitality application. Empty string if not relevant.",
+  "cocoAndDaisy": "specific relevance to animated YouTube production. Empty string if not relevant.",
   "priority": "High|Medium|Low",
   "tags": ["tag1", "tag2"],
   "externalLink": "original article URL",
-  "accessCost": "Estimated cost to access this tool or feature. Use exactly one of: Free, Freemium, Pro ~$X/mo, Enterprise, or N/A if this is news and not a product",
+  "accessCost": "Free|Freemium|Pro ~$X/mo|Enterprise|N/A",
   "status": "New"
 }
 
@@ -85,12 +85,12 @@ ${JSON.stringify(articles, null, 2)}`;
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY || process.env.anthropic,
+      "x-api-key": process.env.ANTHROPIC_API_KEY,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4000,
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 3000,
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -104,68 +104,6 @@ ${JSON.stringify(articles, null, 2)}`;
   const text = data.content[0].text.trim();
   const jsonMatch = text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) throw new Error("No JSON array found in Claude response");
-  return JSON.parse(jsonMatch[0]);
-}
-
-async function generateDailyChallenge() {
-  const today = new Date().toISOString().slice(0, 10);
-
-  const prompt = `You are a personal AI learning coach for Darren, who is learning to build software products with AI assistance. Here is his context:
-- Non-technical operator who started learning 6 months ago
-- Has built: a family dashboard in Lovable, a children's game with Claude API, a Gmail cleanup script, a Wordle game, a file organizer, and today finished building a live AI news dashboard with Vercel, Upstash, and GitHub
-- Works in hospitality (corporate dining, T-Mobile account)
-- Building VoiceInventory (voice AI for restaurants)
-- Co-producing Coco & Daisy animated YouTube series
-- Learns best by building real things, not tutorials
-- Uses Claude as his primary AI assistant
-
-Generate ONE daily build challenge for today (${today}). It should:
-- Take 30-90 minutes with Claude's help
-- Produce something real and useful (not just an exercise)
-- Be slightly beyond what he's done before but achievable
-- Connect to his actual projects when possible
-- Include a clear "how to start" prompt he can paste into Claude
-
-Return ONLY this JSON object with no other text:
-{
-  "id": "challenge-${today}",
-  "title": "challenge title",
-  "category": "Note",
-  "source": "Daily Challenge",
-  "company": "Other",
-  "summary": "What you will build today and why it matters",
-  "whyItMatters": "How this connects to your actual projects and learning journey",
-  "shouldITest": "Paste this exact prompt into a new Claude conversation to start: [include the starter prompt]",
-  "workflowImpact": "What skill this builds and how it compounds with what you already know",
-  "hospitalityRelevance": "",
-  "cocoAndDaisy": "",
-  "accessCost": "Free",
-  "priority": "Medium",
-  "tags": ["daily-challenge", "learning"],
-  "externalLink": "",
-  "status": "New",
-  "dateAdded": "${today}"
-}`;
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY || process.env.anthropic,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-
-  if (!response.ok) return null;
-  const data = await response.json();
-  const text = data.content[0].text.trim();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return null;
   return JSON.parse(jsonMatch[0]);
 }
 
@@ -212,44 +150,22 @@ async function saveToUpstash(cards) {
   return { added: newCards.length, total: merged.length };
 }
 
-async function saveDailyChallenge(challenge) {
-  const url = process.env.KV_REST_API_URL;
-  const token = process.env.KV_REST_API_TOKEN;
-  const today = new Date().toISOString().slice(0, 10);
-
-  try {
-    const response = await fetch(`${url}/get/daily-challenge-${today}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await response.json();
-    if (data.result) return JSON.parse(data.result);
-  } catch (e) {}
-
-  await fetch(`${url}/set/daily-challenge-${today}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify([JSON.stringify(challenge)]),
-  });
-
-  return challenge;
-}
-
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
-  
+
   try {
     console.log("Starting news fetch...");
 
     const allArticles = [];
-    for (const feed of FEEDS) {
-      const items = await fetchFeed(feed.url);
-      items.forEach(item => allArticles.push({ ...item, feedCompany: feed.company }));
-    }
+    const feedPromises = FEEDS.map(feed =>
+      fetchFeed(feed.url).then(items =>
+        items.forEach(item => allArticles.push({ ...item, feedCompany: feed.company }))
+      )
+    );
+    await Promise.all(feedPromises);
+
     console.log(`Fetched ${allArticles.length} articles`);
 
     if (allArticles.length === 0) {
@@ -259,33 +175,10 @@ export default async function handler(req, res) {
     const cards = await analyzeWithClaude(allArticles);
     console.log(`Claude returned ${cards.length} cards`);
 
-    const today = new Date().toISOString().slice(0, 10);
-    const url = process.env.KV_REST_API_URL;
-    const token = process.env.KV_REST_API_TOKEN;
-
-    let challengeAdded = false;
-    try {
-      const existingCheck = await fetch(`${url}/get/daily-challenge-${today}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const existingData = await existingCheck.json();
-
-      if (!existingData.result) {
-        const challenge = await generateDailyChallenge();
-        if (challenge) {
-          await saveDailyChallenge(challenge);
-          cards.push(challenge);
-          challengeAdded = true;
-        }
-      }
-    } catch (e) {
-      console.error("Challenge error:", e.message);
-    }
-
     const result = await saveToUpstash(cards);
     console.log(`Saved: ${result.added} new, ${result.total} total`);
 
-    res.status(200).json({ success: true, ...result, challengeAdded });
+    res.status(200).json({ success: true, ...result });
   } catch (error) {
     console.error("fetch-news error:", error);
     res.status(500).json({ error: error.message });
