@@ -1,247 +1,174 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <meta name="apple-mobile-web-app-title" content="Signal Board">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Signal Board">
+<meta name="theme-color" content="#FAF8F5">
+<title>AI Signal Board</title>
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0a0c0f; --surface: #111418; --border: #1e2329;
-    --border-light: #2a3038; --text: #f0f2f4; --text-muted: #8892a0;
-    --text-dim: #4a5568; --green: #34d399; --amber: #fbbf24;
-    --red: #f87171; --blue: #60a5fa; --pink: #f472b6;
-    --orange: #fb923c; --violet: #a78bfa; --cyan: #22d3ee;
+    --bg: #FAF8F5; --bg-warm: #F5F2ED; --surface: #FFFFFF; --surface-warm: #FDFCFA;
+    --border: #E8E2D9; --border-light: #F0EBE3; --text: #1C1917; --text-muted: #6B6560;
+    --text-dim: #A89F96; --blue: #2563EB; --blue-light: #EFF4FF; --blue-mid: #BFCFFF;
+    --green: #16A34A; --green-light: #F0FDF4; --amber: #D97706; --amber-light: #FFFBEB;
+    --red: #DC2626; --red-light: #FEF2F2; --orange: #EA580C; --pink: #DB2777;
+    --shadow-sm: 0 1px 3px rgba(28,25,23,0.06), 0 1px 2px rgba(28,25,23,0.04);
+    --shadow: 0 4px 12px rgba(28,25,23,0.08), 0 1px 3px rgba(28,25,23,0.04);
+    --radius: 12px; --radius-sm: 8px;
+  }
   body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-  .header { position: sticky; top: 0; z-index: 100; background: rgba(10,12,15,0.93); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 14px 16px 10px; }
-  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .logo h1 { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--text); }
-  .logo p { font-size: 10px; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 2px; }
-  .refresh-btn { background: #fff; color: #000; border: none; border-radius: 10px; padding: 8px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 6px; transition: opacity 0.15s; }
-  .refresh-btn.loading { opacity: 0.5; pointer-events: none; }
-  .tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .header { position: sticky; top: 0; z-index: 100; background: rgba(250,248,245,0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); padding: 14px 20px 0; }
+  .header-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+  .logo h1 { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; line-height: 1.2; }
+  .logo p { font-size: 10px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 3px; }
+  .refresh-btn { background: var(--blue); color: #fff; border: none; border-radius: var(--radius-sm); padding: 8px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 1px 3px rgba(37,99,235,0.3); }
+  .refresh-btn:hover { background: #1d4ed8; }
+  .refresh-btn.loading { opacity: 0.6; pointer-events: none; }
+  .tabs { display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; margin: 0 -20px; padding: 0 20px; }
   .tabs::-webkit-scrollbar { display: none; }
-  .tab { flex-shrink: 0; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--text-dim); font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
-  .tab.active { background: var(--surface); color: var(--text); }
-  .main { max-width: 680px; margin: 0 auto; padding: 16px 16px 100px; }
-  .search-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; margin-bottom: 14px; transition: border-color 0.15s; }
-  .search-input:focus { border-color: var(--border-light); }
+  .tab { flex-shrink: 0; padding: 8px 14px; font-size: 13px; font-style: italic; font-family: 'Playfair Display', serif; cursor: pointer; border: none; background: transparent; color: var(--text-dim); transition: all 0.15s; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab:hover { color: var(--text-muted); }
+  .tab.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
+  .challenge-banner { max-width: 700px; margin: 0 auto; padding: 16px 20px 0; }
+  .challenge-banner-inner { background: var(--blue-light); border: 1px solid var(--blue-mid); border-radius: var(--radius); padding: 16px 18px; position: relative; overflow: hidden; }
+  .challenge-banner-inner::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--blue); border-radius: 4px 0 0 4px; }
+  .challenge-banner-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .challenge-banner-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); display: flex; align-items: center; gap: 5px; }
+  .challenge-banner-date { font-size: 11px; color: var(--text-dim); }
+  .challenge-banner-title { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.35; margin-bottom: 6px; }
+  .challenge-banner-summary { font-size: 12px; color: var(--text-muted); line-height: 1.65; margin-bottom: 12px; }
+  .challenge-banner-actions { display: flex; align-items: center; gap: 8px; }
+  .challenge-start-btn { background: var(--blue); color: #fff; border: none; border-radius: var(--radius-sm); padding: 7px 14px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s; }
+  .challenge-start-btn:hover { background: #1d4ed8; }
+  .challenge-focus-tag { font-size: 11px; color: var(--blue); background: rgba(37,99,235,0.08); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--blue-mid); }
+  .challenge-prompt-box { display: none; margin-top: 12px; background: #fff; border: 1px solid var(--blue-mid); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .challenge-prompt-box.open { display: block; }
+  .challenge-prompt-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: var(--blue); margin-bottom: 8px; }
+  .challenge-prompt-text { font-size: 12px; color: var(--text-muted); line-height: 1.7; white-space: pre-wrap; }
+  .challenge-copy-btn { margin-top: 10px; background: transparent; border: 1px solid var(--blue-mid); color: var(--blue); border-radius: 6px; padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  .challenge-banner-empty { text-align: center; padding: 14px; color: var(--text-dim); font-size: 12px; }
+  .main { max-width: 700px; margin: 0 auto; padding: 16px 20px 100px; }
+  .search-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 11px 16px; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; margin-bottom: 14px; transition: border-color 0.15s, box-shadow 0.15s; box-shadow: var(--shadow-sm); }
+  .search-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
   .search-input::placeholder { color: var(--text-dim); }
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 14px; overflow: hidden; }
-  .stat { padding: 12px 8px; text-align: center; border-right: 1px solid var(--border); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; box-shadow: var(--shadow-sm); }
+  .stat { padding: 12px 8px; text-align: center; border-right: 1px solid var(--border-light); }
   .stat:last-child { border-right: none; }
-  .stat-value { font-size: 22px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .stat-value { font-size: 22px; font-weight: 700; line-height: 1; margin-bottom: 4px; font-family: 'Playfair Display', serif; }
   .stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); }
   .last-updated { text-align: center; font-size: 11px; color: var(--text-dim); margin-bottom: 14px; }
-  .last-updated span { color: var(--green); }
+  .last-updated span { color: var(--blue); font-weight: 500; }
   .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-  .filter-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); width: 58px; flex-shrink: 0; }
-  .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .filter-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); width: 58px; flex-shrink: 0; font-weight: 600; }
+  .chips { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
   .chips::-webkit-scrollbar { display: none; }
-  .chip { flex-shrink: 0; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid var(--border-light); background: transparent; color: var(--text-muted); font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; }
-  .chip.active { background: #fff; color: #000; border-color: #fff; }
+  .chip { flex-shrink: 0; padding: 4px 11px; border-radius: 20px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; }
+  .chip:hover { border-color: var(--blue); color: var(--blue); }
+  .chip.active { background: var(--blue); color: #fff; border-color: var(--blue); }
   .filters-section { margin-bottom: 16px; }
   .cards { display: flex; flex-direction: column; gap: 10px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; border-left-width: 3px; }
-  .card-header { padding: 14px 14px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; border-left: 3px solid transparent; box-shadow: var(--shadow-sm); transition: box-shadow 0.15s, transform 0.15s; }
+  .card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+  .card-header { padding: 14px 16px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
   .card-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
   .card-meta-left { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex: 1; }
   .card-meta-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-  .badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; border: 1px solid; }
+  .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; border: 1px solid; }
   .cost-badge { font-size: 10px; padding: 2px 7px; border-radius: 20px; white-space: nowrap; font-weight: 600; border: 1px solid; }
-  .cost-free { color: #34d399; background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); }
-  .cost-freemium { color: #60a5fa; background: rgba(96,165,250,0.1); border-color: rgba(96,165,250,0.3); }
-  .cost-pro { color: #fbbf24; background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.3); }
-  .cost-enterprise { color: #f87171; background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); }
+  .cost-free { color: var(--green); background: var(--green-light); border-color: #BBF7D0; }
+  .cost-freemium { color: var(--blue); background: var(--blue-light); border-color: var(--blue-mid); }
+  .cost-pro { color: var(--amber); background: var(--amber-light); border-color: #FDE68A; }
+  .cost-enterprise { color: var(--red); background: var(--red-light); border-color: #FECACA; }
   .card-date { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
-  .card-title { font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--text); margin-bottom: 6px; }
-  .card-summary { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
-  .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  .card-title { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 600; line-height: 1.4; color: var(--text); margin-bottom: 6px; letter-spacing: -0.01em; }
+  .card-summary { font-size: 12px; color: var(--text-muted); line-height: 1.65; }
+  .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
   .card-source { font-size: 11px; color: var(--text-dim); }
   .expand-hint { font-size: 11px; color: var(--text-dim); }
-  .card-body { padding: 12px 14px 14px; border-top: 1px solid var(--border); display: none; }
+  .card-body { padding: 12px 16px 14px; border-top: 1px solid var(--border-light); display: none; background: var(--surface-warm); }
   .card-body.open { display: block; }
   .card-section { margin-bottom: 12px; }
   .card-section:last-child { margin-bottom: 0; }
-  .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; margin-bottom: 5px; color: var(--text-dim); }
-  .section-text { font-size: 12px; line-height: 1.65; color: var(--text-muted); }
-  .highlight-box { border-radius: 10px; padding: 10px 12px; border: 1px solid; }
+  .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; margin-bottom: 5px; color: var(--text-dim); }
+  .section-text { font-size: 12px; line-height: 1.7; color: var(--text-muted); }
+  .highlight-box { border-radius: var(--radius-sm); padding: 10px 12px; border: 1px solid; }
   .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
-  .tag { font-size: 10px; background: var(--bg); color: var(--text-dim); padding: 3px 8px; border-radius: 20px; }
+  .tag { font-size: 10px; background: var(--bg-warm); color: var(--text-dim); padding: 3px 8px; border-radius: 20px; border: 1px solid var(--border-light); }
   .card-actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
-  .status-select { padding: 6px 10px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border-light); color: var(--text-muted); font-size: 11px; font-family: 'DM Sans', sans-serif; cursor: pointer; }
-  .action-link { font-size: 12px; color: var(--blue); text-decoration: none; margin-left: auto; }
+  .status-select { padding: 5px 10px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--border); color: var(--text-muted); font-size: 11px; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+  .action-link { font-size: 12px; color: var(--blue); text-decoration: none; margin-left: auto; font-weight: 500; }
   .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
   .dot-New { background: var(--green); } .dot-Reviewing { background: var(--amber); } .dot-Tested { background: var(--blue); } .dot-Archived { background: var(--text-dim); }
-  .section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; margin-top: 24px; }
+  .section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; margin-top: 28px; }
   .section-header:first-child { margin-top: 0; }
-  .section-header h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+  .section-header h2 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); }
   .section-count { font-size: 10px; background: var(--border); color: var(--text-dim); padding: 2px 7px; border-radius: 20px; }
-  .empty { border: 1px dashed var(--border-light); border-radius: 14px; padding: 40px 20px; text-align: center; color: var(--text-dim); font-size: 13px; }
+  .empty { border: 1px dashed var(--border); border-radius: var(--radius); padding: 40px 20px; text-align: center; color: var(--text-dim); font-size: 13px; background: var(--surface-warm); }
   .empty-icon { font-size: 28px; margin-bottom: 10px; }
   .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 12px; color: var(--text-dim); font-size: 13px; }
-  .spinner { width: 24px; height: 24px; border: 2px solid var(--border-light); border-top-color: var(--text-muted); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  .spinner { width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .priority-High { color: var(--red); background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); }
-  .priority-Medium { color: var(--amber); background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.3); }
-  .priority-Low { color: var(--text-dim); background: rgba(74,85,104,0.2); border-color: rgba(74,85,104,0.3); }
-  .cat-big { border-left-color: #f59e0b; } .cat-model { border-left-color: #8b5cf6; }
-  .cat-capability { border-left-color: #3b82f6; } .cat-agentic { border-left-color: #10b981; }
-  .cat-workflow { border-left-color: #06b6d4; } .cat-hospitality { border-left-color: #f97316; }
-  .cat-coco { border-left-color: #ec4899; } .cat-note { border-left-color: #6b7280; }
-  .cb-big { color: #fbbf24; background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3); }
-  .cb-model { color: #a78bfa; background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.3); }
-  .cb-capability { color: #60a5fa; background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.3); }
-  .cb-agentic { color: #34d399; background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.3); }
-  .cb-workflow { color: #22d3ee; background: rgba(6,182,212,0.12); border-color: rgba(6,182,212,0.3); }
-  .cb-hospitality { color: #fb923c; background: rgba(249,115,22,0.12); border-color: rgba(249,115,22,0.3); }
-  .cb-coco { color: #f472b6; background: rgba(236,72,153,0.12); border-color: rgba(236,72,153,0.3); }
-  .cb-note { color: #9ca3af; background: rgba(107,114,128,0.12); border-color: rgba(107,114,128,0.3); }
-
+  .priority-High { color: var(--red); background: var(--red-light); border-color: #FECACA; }
+  .priority-Medium { color: var(--amber); background: var(--amber-light); border-color: #FDE68A; }
+  .priority-Low { color: var(--text-dim); background: var(--bg-warm); border-color: var(--border); }
+  .cat-big { border-left-color: #D97706; } .cat-model { border-left-color: #7C3AED; }
+  .cat-capability { border-left-color: var(--blue); } .cat-agentic { border-left-color: #16A34A; }
+  .cat-workflow { border-left-color: #0891B2; } .cat-hospitality { border-left-color: #EA580C; }
+  .cat-coco { border-left-color: #DB2777; } .cat-note { border-left-color: var(--border); }
+  .cb-big { color: #92400E; background: #FEF3C7; border-color: #FDE68A; }
+  .cb-model { color: #5B21B6; background: #EDE9FE; border-color: #DDD6FE; }
+  .cb-capability { color: #1D4ED8; background: var(--blue-light); border-color: var(--blue-mid); }
+  .cb-agentic { color: #166534; background: var(--green-light); border-color: #BBF7D0; }
+  .cb-workflow { color: #155E75; background: #ECFEFF; border-color: #A5F3FC; }
+  .cb-hospitality { color: #9A3412; background: #FFF7ED; border-color: #FED7AA; }
+  .cb-coco { color: #9D174D; background: #FDF2F8; border-color: #FBCFE8; }
+  .cb-note { color: var(--text-dim); background: var(--bg-warm); border-color: var(--border); }
   .challenge-wrap { display: flex; flex-direction: column; gap: 14px; }
-  .challenge-panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-  }
-  .challenge-title-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 12px;
-  }
-  .challenge-title-row h2 {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .challenge-title-row p {
-    font-size: 11px;
-    color: var(--text-dim);
-  }
-  .challenge-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .challenge-input,
-  .challenge-textarea {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border-light);
-    border-radius: 12px;
-    padding: 12px 14px;
-    color: var(--text);
-    font-size: 13px;
-    font-family: 'DM Sans', sans-serif;
-    outline: none;
-  }
-  .challenge-input:focus,
-  .challenge-textarea:focus {
-    border-color: var(--blue);
-  }
-  .challenge-input::placeholder,
-  .challenge-textarea::placeholder {
-    color: var(--text-dim);
-  }
-  .challenge-textarea {
-    min-height: 92px;
-    resize: vertical;
-    line-height: 1.5;
-  }
-  .challenge-save {
-    background: #fff;
-    color: #000;
-    border: none;
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    align-self: flex-start;
-  }
-  .challenge-status {
-    min-height: 18px;
-    font-size: 11px;
-    color: var(--text-dim);
-  }
-  .challenge-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .challenge-entry {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 14px;
-    border-left: 3px solid var(--blue);
-  }
-  .challenge-entry-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 8px;
-  }
-  .challenge-entry-title {
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.35;
-  }
-  .challenge-entry-date {
-    font-size: 11px;
-    color: var(--text-dim);
-    white-space: nowrap;
-  }
-  .challenge-entry-block {
-    margin-top: 10px;
-  }
-  .challenge-entry-label {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-weight: 600;
-    margin-bottom: 5px;
-    color: var(--text-dim);
-  }
-  .challenge-entry-text {
-    font-size: 12px;
-    line-height: 1.65;
-    color: var(--text-muted);
-  }
-  .challenge-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 10px;
-  }
-  .challenge-tag {
-    font-size: 10px;
-    background: var(--bg);
-    color: var(--text-dim);
-    padding: 3px 8px;
-    border-radius: 20px;
-  }
-
+  .challenge-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-sm); }
+  .challenge-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+  .challenge-title-row h2 { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 600; color: var(--text); }
+  .challenge-title-row p { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+  .challenge-form { display: flex; flex-direction: column; gap: 10px; }
+  .challenge-input, .challenge-textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+  .challenge-input:focus, .challenge-textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+  .challenge-input::placeholder, .challenge-textarea::placeholder { color: var(--text-dim); }
+  .challenge-textarea { min-height: 88px; resize: vertical; line-height: 1.55; }
+  .challenge-save { background: var(--blue); color: #fff; border: none; border-radius: var(--radius-sm); padding: 10px 16px; font-size: 12px; font-weight: 600; cursor: pointer; align-self: flex-start; font-family: 'DM Sans', sans-serif; transition: background 0.15s; }
+  .challenge-save:hover { background: #1d4ed8; }
+  .challenge-status { min-height: 18px; font-size: 11px; color: var(--text-dim); }
+  .challenge-list { display: flex; flex-direction: column; gap: 10px; }
+  .challenge-entry { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; border-left: 3px solid var(--blue); box-shadow: var(--shadow-sm); }
+  .challenge-entry-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .challenge-entry-title { font-family: 'Playfair Display', serif; font-size: 14px; font-weight: 600; line-height: 1.35; color: var(--text); }
+  .challenge-entry-date { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+  .challenge-entry-block { margin-top: 10px; }
+  .challenge-entry-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; margin-bottom: 5px; color: var(--text-dim); }
+  .challenge-entry-text { font-size: 12px; line-height: 1.65; color: var(--text-muted); }
+  .challenge-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+  .challenge-tag { font-size: 10px; background: var(--bg-warm); color: var(--text-dim); padding: 3px 8px; border-radius: 20px; border: 1px solid var(--border-light); }
   @media (min-width: 640px) {
-    .main { padding: 20px 24px 80px; }
-    .logo h1 { font-size: 22px; }
+    .main { padding: 16px 24px 80px; }
+    .challenge-banner { padding: 16px 24px 0; }
+    .header { padding: 16px 24px 0; }
+    .logo h1 { font-size: 24px; }
   }
 </style>
 </head>
 <body>
-
 <header class="header">
   <div class="header-top">
     <div class="logo">
       <h1>AI Signal Board</h1>
-      <p>Personal Intelligence Dashboard</p>
+      <p>Darren Nicholas · Personal Intelligence Dashboard</p>
     </div>
     <button class="refresh-btn" id="refreshBtn" onclick="triggerFetch()">
       <span id="refreshIcon">⟳</span> Refresh
@@ -249,13 +176,19 @@
   </div>
   <div class="tabs">
     <button class="tab active" onclick="setTab('feed',this)">Feed</button>
-    <button class="tab" onclick="setTab('sections',this)">Sections</button>
     <button class="tab" onclick="setTab('agentic',this)">Agentic</button>
     <button class="tab" onclick="setTab('hospitality',this)">Hospitality</button>
+    <button class="tab" onclick="setTab('dsquared',this)">DSquared</button>
     <button class="tab" onclick="setTab('coco',this)">Coco & Daisy</button>
     <button class="tab" onclick="setTab('challenges',this)">Challenge Log</button>
   </div>
 </header>
+
+<div class="challenge-banner">
+  <div class="challenge-banner-inner" id="challengeBannerInner">
+    <div class="challenge-banner-empty">Loading today's challenge...</div>
+  </div>
+</div>
 
 <main class="main">
   <input class="search-input" type="search" placeholder="Search entries..." id="searchInput" oninput="renderAll()">
@@ -270,6 +203,7 @@
 <script>
 let allCards = [], activeTab = 'feed', lastUpdated = null;
 let challengeEntries = [], challengeLastUpdated = null;
+let todayChallenge = null;
 let filters = { category: 'All', priority: 'All', status: 'All' };
 
 const CAT_MAP = {
@@ -290,61 +224,107 @@ function costBadge(cost) {
   return `<span class="cost-badge ${cls}">${cost}</span>`;
 }
 
+function unwrapChallenge(raw) {
+  try {
+    let c = raw;
+    for (let i = 0; i < 5; i++) {
+      if (typeof c === 'string') { c = JSON.parse(c); continue; }
+      if (Array.isArray(c)) {
+        const str = c.find(x => typeof x === 'string' && x.startsWith('{'));
+        if (str) { c = JSON.parse(str); continue; }
+        if (typeof c[0] === 'object') { c = c[0]; break; }
+        break;
+      }
+      if (typeof c === 'object' && c !== null && c.title) break;
+      break;
+    }
+    return (typeof c === 'object' && c !== null && c.title) ? c : null;
+  } catch(e) { return null; }
+}
+
 async function loadCards() {
   try {
     const res = await fetch('/api/get-cards');
     const data = await res.json();
-    allCards = data.cards || [];
+    allCards = (data.cards || []).filter(c => c.source !== 'Daily Challenge');
     lastUpdated = data.lastUpdated;
+    const challengeCard = (data.cards || []).find(c => c.source === 'Daily Challenge');
+    if (challengeCard && !todayChallenge) { todayChallenge = challengeCard; renderChallengeBanner(); }
     applyLocalOverrides();
     renderAll();
   } catch(e) {
-    document.getElementById('content').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load cards.</p><p style="font-size:11px;margin-top:6px">${escapeHtml(e.message)}</p><p style="font-size:11px;margin-top:8px">Try hitting Refresh to fetch your first batch of news.</p></div>`;
+    document.getElementById('content').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load cards. Hit Refresh to try again.</p></div>`;
     renderStats();
   }
 }
 
+async function loadTodayChallenge() {
+  try {
+    const res = await fetch('/api/fetch-challenge');
+    const data = await res.json();
+    if (data.challenge) {
+      const c = unwrapChallenge(data.challenge);
+      if (c) { todayChallenge = c; renderChallengeBanner(); }
+    }
+  } catch(e) { console.error('Challenge load error:', e); }
+}
+
+function renderChallengeBanner() {
+  const inner = document.getElementById('challengeBannerInner');
+  if (!todayChallenge) { inner.innerHTML = `<div class="challenge-banner-empty">No challenge today — hit Refresh to generate one.</div>`; return; }
+  const c = todayChallenge;
+  const tags = (c.tags || []).filter(t => t !== 'daily-challenge' && t !== 'learning');
+  const focusTag = tags[0] || '';
+  const date = c.dateAdded ? new Date(c.dateAdded + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '';
+  const prompt = (c.shouldITest || '').replace(/^Paste this exact prompt into a new Claude conversation to start:\s*/i, '');
+  inner.innerHTML = `
+    <div class="challenge-banner-header">
+      <div class="challenge-banner-label">🎯 Today's Build Challenge</div>
+      <div class="challenge-banner-date">${date}</div>
+    </div>
+    <div class="challenge-banner-title">${escapeHtml(c.title || '')}</div>
+    <div class="challenge-banner-summary">${escapeHtml(c.summary || '')}</div>
+    <div class="challenge-banner-actions">
+      <button class="challenge-start-btn" onclick="toggleStarterPrompt()">Start Building →</button>
+      ${focusTag ? `<span class="challenge-focus-tag">#${escapeHtml(focusTag)}</span>` : ''}
+    </div>
+    <div class="challenge-prompt-box" id="starterPromptBox">
+      <div class="challenge-prompt-label">Paste this into Claude to start</div>
+      <div class="challenge-prompt-text" id="starterPromptText">${escapeHtml(prompt)}</div>
+      <button class="challenge-copy-btn" onclick="copyStarterPrompt()">Copy prompt</button>
+    </div>`;
+}
+
+function toggleStarterPrompt() { const box = document.getElementById('starterPromptBox'); if (box) box.classList.toggle('open'); }
+function copyStarterPrompt() {
+  const text = document.getElementById('starterPromptText');
+  if (text) { navigator.clipboard.writeText(text.innerText).then(() => { const btn = document.querySelector('.challenge-copy-btn'); if (btn) { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy prompt', 2000); } }); }
+}
+
 async function loadChallenges(force = false) {
   if (challengeEntries.length > 0 && !force) return;
-
   try {
     const res = await fetch('/api/get-challenges');
     const data = await res.json();
     challengeEntries = Array.isArray(data.entries) ? data.entries : [];
     challengeLastUpdated = data.lastUpdated || new Date().toISOString();
-  } catch (e) {
-    console.error('Challenge load error:', e);
-    challengeEntries = [];
-  }
+  } catch (e) { challengeEntries = []; }
 }
 
 async function triggerFetch() {
   const btn = document.getElementById('refreshBtn');
   const icon = document.getElementById('refreshIcon');
-  btn.classList.add('loading');
-  icon.textContent = '↻';
+  btn.classList.add('loading'); icon.textContent = '↻';
   try {
-    const [newsRes, challengeRes] = await Promise.allSettled([
-      fetch('/api/fetch-news'),
-      fetch('/api/fetch-challenge')
-    ]);
-    if (newsRes.status === 'fulfilled') {
-      const data = await newsRes.value.json();
-      console.log('News fetch result:', data);
-    }
+    const [newsRes, challengeRes] = await Promise.allSettled([fetch('/api/fetch-news'), fetch('/api/fetch-challenge')]);
     if (challengeRes.status === 'fulfilled') {
       const data = await challengeRes.value.json();
-      console.log('Challenge result:', data);
+      if (data.challenge) { const c = unwrapChallenge(data.challenge); if (c) { todayChallenge = c; renderChallengeBanner(); } }
     }
     await new Promise(r => setTimeout(r, 2000));
-    await loadCards();
-    renderAll();
-  } catch(e) {
-    console.error('Fetch error:', e);
-  } finally {
-    btn.classList.remove('loading');
-    icon.textContent = '⟳';
-  }
+    await loadCards(); renderAll();
+  } catch(e) { console.error('Fetch error:', e); }
+  finally { btn.classList.remove('loading'); icon.textContent = '⟳'; }
 }
 
 function getFiltered() {
@@ -354,371 +334,101 @@ function getFiltered() {
     if (filters.category !== 'All' && c.category !== filters.category) return false;
     if (filters.priority !== 'All' && c.priority !== filters.priority) return false;
     if (filters.status !== 'All' && c.status !== filters.status) return false;
-    if (q) return (c.title||'').toLowerCase().includes(q) || (c.summary||'').toLowerCase().includes(q) || (c.tags||[]).some(t=>t.toLowerCase().includes(q));
+    if (q) return (c.title||'').toLowerCase().includes(q)||(c.summary||'').toLowerCase().includes(q)||(c.tags||[]).some(t=>t.toLowerCase().includes(q));
     return true;
-  }).sort((a,b) => {
-    const po = {High:0,Medium:1,Low:2};
-    const pd = (po[a.priority]??1)-(po[b.priority]??1);
-    return pd !== 0 ? pd : new Date(b.dateAdded||0)-new Date(a.dateAdded||0);
-  });
+  }).sort((a,b) => { const po={High:0,Medium:1,Low:2}; const pd=(po[a.priority]??1)-(po[b.priority]??1); return pd!==0?pd:new Date(b.dateAdded||0)-new Date(a.dateAdded||0); });
 }
 
 function getFilteredChallenges() {
   const q = document.getElementById('searchInput').value.toLowerCase();
-  return challengeEntries.filter(entry => {
-    if (!q) return true;
-    return (
-      (entry.title || '').toLowerCase().includes(q) ||
-      (entry.prompt || '').toLowerCase().includes(q) ||
-      (entry.result || '').toLowerCase().includes(q) ||
-      (entry.takeaway || '').toLowerCase().includes(q) ||
-      (entry.tags || []).some(tag => tag.toLowerCase().includes(q))
-    );
-  }).sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  return challengeEntries.filter(entry => { if (!q) return true; return (entry.title||'').toLowerCase().includes(q)||(entry.prompt||'').toLowerCase().includes(q)||(entry.result||'').toLowerCase().includes(q)||(entry.takeaway||'').toLowerCase().includes(q)||(entry.tags||[]).some(t=>t.toLowerCase().includes(q)); }).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
 }
 
 function renderAll() {
-  renderStats();
-  renderLastUpdated();
-  renderFilters();
-  updateSearchPlaceholder();
-
-  if (activeTab === 'challenges') {
-    renderChallengesTab();
-    return;
-  }
-
+  renderStats(); renderLastUpdated(); renderFilters(); updateSearchPlaceholder();
+  if (activeTab==='challenges') { renderChallengesTab(); return; }
   const f = getFiltered();
   if (activeTab==='feed') renderFeed(f);
-  else if (activeTab==='sections') renderSections(f);
   else if (activeTab==='agentic') renderSpecial(f.filter(c=>c.category==='Agentic Progress'),'🤖','Agentic AI & Automation','Tracking the frontier from chatbot to autonomous agent.');
   else if (activeTab==='hospitality') renderSpecial(f.filter(c=>c.hospitalityRelevance||c.category==='Hospitality Relevance'),'🍽️','Hospitality & Operations','AI relevant to DSquared, T-Mobile LOU, and catering ops.');
+  else if (activeTab==='dsquared') renderSpecial(f.filter(c=>c.hospitalityRelevance||c.category==='Hospitality Relevance'),'🏢','DSquared','Catering automation, T-Mobile LOU, and corporate dining intelligence.');
   else if (activeTab==='coco') renderSpecial(f.filter(c=>c.cocoAndDaisy||c.category==='Coco & Daisy'),'🌸','Coco & Daisy','AI tools for your animated YouTube world.');
 }
 
 function renderStats() {
   const statsBar = document.getElementById('statsBar');
-
-  if (activeTab === 'challenges') {
-    const reviewed = challengeEntries.filter(e => (e.tags || []).length > 0).length;
-    statsBar.style.display = 'grid';
-    statsBar.innerHTML = [
-      { label: 'Entries', value: challengeEntries.length, color: 'var(--text)' },
-      { label: 'This Week', value: challengeEntries.filter(isThisWeek).length, color: 'var(--green)' },
-      { label: 'Tagged', value: reviewed, color: 'var(--blue)' },
-      { label: 'Today', value: challengeEntries.filter(isToday).length, color: 'var(--amber)' }
-    ].map((x,i)=>`<div class="stat"${i===3?' style="border-right:none"':''}><div class="stat-value" style="color:${x.color}">${x.value}</div><div class="stat-label">${x.label}</div></div>`).join('');
+  if (activeTab==='challenges') {
+    statsBar.style.display='grid';
+    statsBar.innerHTML=[{label:'Entries',value:challengeEntries.length,color:'var(--text)'},{label:'This Week',value:challengeEntries.filter(isThisWeek).length,color:'var(--green)'},{label:'Tagged',value:challengeEntries.filter(e=>(e.tags||[]).length>0).length,color:'var(--blue)'},{label:'Today',value:challengeEntries.filter(isToday).length,color:'var(--amber)'}].map((x,i)=>`<div class="stat"${i===3?' style="border-right:none"':''}><div class="stat-value" style="color:${x.color}">${x.value}</div><div class="stat-label">${x.label}</div></div>`).join('');
     return;
   }
-
-  const active = allCards.filter(c=>c.status!=='Archived');
-  const s = [
-    {label:'Active', value:active.length, color:'var(--text)'},
-    {label:'High Pri', value:active.filter(c=>c.priority==='High').length, color:'var(--red)'},
-    {label:'New', value:active.filter(c=>c.status==='New').length, color:'var(--green)'},
-    {label:'Testing', value:active.filter(c=>c.status==='Reviewing'||c.status==='Tested').length, color:'var(--amber)'},
-  ];
-  statsBar.style.display = 'grid';
-  statsBar.innerHTML = s.map((x,i)=>`<div class="stat"${i===3?' style="border-right:none"':''}><div class="stat-value" style="color:${x.color}">${x.value}</div><div class="stat-label">${x.label}</div></div>`).join('');
+  const active=allCards.filter(c=>c.status!=='Archived');
+  statsBar.style.display='grid';
+  statsBar.innerHTML=[{label:'Active',value:active.length,color:'var(--text)'},{label:'High Pri',value:active.filter(c=>c.priority==='High').length,color:'var(--red)'},{label:'New',value:active.filter(c=>c.status==='New').length,color:'var(--green)'},{label:'Testing',value:active.filter(c=>c.status==='Reviewing'||c.status==='Tested').length,color:'var(--amber)'}].map((x,i)=>`<div class="stat"${i===3?' style="border-right:none"':''}><div class="stat-value" style="color:${x.color}">${x.value}</div><div class="stat-label">${x.label}</div></div>`).join('');
 }
 
 function renderLastUpdated() {
-  const el = document.getElementById('lastUpdated');
-
-  if (activeTab === 'challenges') {
-    if (!challengeLastUpdated && challengeEntries.length === 0) {
-      el.innerHTML = 'Log your prompting experiments here ... entries persist to your board';
-      return;
-    }
-    const d = new Date(challengeLastUpdated || new Date().toISOString());
-    el.innerHTML = `Challenge log <span>${challengeEntries.length} entries</span> · Updated ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${d.toLocaleDateString([],{month:'short',day:'numeric'})}`;
-    return;
-  }
-
-  if (!lastUpdated) {
-    el.innerHTML = allCards.length===0 ? 'No cards yet — hit <strong>Refresh</strong> to fetch your first batch' : '';
-    return;
-  }
-  const d = new Date(lastUpdated);
-  el.innerHTML = `Last updated <span>${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${d.toLocaleDateString([],{month:'short',day:'numeric'})}</span> · Auto-refreshes every 4 hours`;
+  const el=document.getElementById('lastUpdated');
+  if (activeTab==='challenges') { if(!challengeLastUpdated&&challengeEntries.length===0){el.innerHTML='Log your prompting experiments here';return;} const d=new Date(challengeLastUpdated||new Date().toISOString()); el.innerHTML=`Challenge log <span>${challengeEntries.length} entries</span> · Updated ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${d.toLocaleDateString([],{month:'short',day:'numeric'})}`; return; }
+  if (!lastUpdated){el.innerHTML=allCards.length===0?'No cards yet — hit <strong>Refresh</strong> to fetch your first batch':'';return;}
+  const d=new Date(lastUpdated); el.innerHTML=`Last updated <span>${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${d.toLocaleDateString([],{month:'short',day:'numeric'})}</span> · Auto-refreshes every 4 hours`;
 }
 
 function renderFilters() {
-  const filtersEl = document.getElementById('filtersSection');
-
-  if (activeTab === 'challenges') {
-    filtersEl.style.display = 'none';
-    return;
-  }
-
-  filtersEl.style.display = 'block';
-  const cats = ['All',...['Big Move','Model Launch','Capability Update','Agentic Progress','Workflow Idea','Hospitality Relevance','Coco & Daisy','Note'].filter(c=>allCards.some(x=>x.category===c))];
-  filtersEl.innerHTML = `
-    <div class="filter-row"><span class="filter-label">Category</span><div class="chips">${cats.map(c=>`<button class="chip${filters.category===c?' active':''}" onclick="setFilter('category',${JSON.stringify(c)})">${c}</button>`).join('')}</div></div>
-    <div class="filter-row"><span class="filter-label">Priority</span><div class="chips">${['All','High','Medium','Low'].map(p=>`<button class="chip${filters.priority===p?' active':''}" onclick="setFilter('priority','${p}')">${p}</button>`).join('')}</div></div>
-    <div class="filter-row"><span class="filter-label">Status</span><div class="chips">${['All','New','Reviewing','Tested','Archived'].map(s=>`<button class="chip${filters.status===s?' active':''}" onclick="setFilter('status','${s}')">${s}</button>`).join('')}</div></div>`;
+  const filtersEl=document.getElementById('filtersSection');
+  if (activeTab==='challenges'){filtersEl.style.display='none';return;}
+  filtersEl.style.display='block';
+  const cats=['All',...['Big Move','Model Launch','Capability Update','Agentic Progress','Workflow Idea','Hospitality Relevance','Coco & Daisy','Note'].filter(c=>allCards.some(x=>x.category===c))];
+  filtersEl.innerHTML=`<div class="filter-row"><span class="filter-label">Category</span><div class="chips">${cats.map(c=>`<button class="chip${filters.category===c?' active':''}" onclick="setFilter('category',${JSON.stringify(c)})">${c}</button>`).join('')}</div></div><div class="filter-row"><span class="filter-label">Priority</span><div class="chips">${['All','High','Medium','Low'].map(p=>`<button class="chip${filters.priority===p?' active':''}" onclick="setFilter('priority','${p}')">${p}</button>`).join('')}</div></div><div class="filter-row"><span class="filter-label">Status</span><div class="chips">${['All','New','Reviewing','Tested','Archived'].map(s=>`<button class="chip${filters.status===s?' active':''}" onclick="setFilter('status','${s}')">${s}</button>`).join('')}</div></div>`;
 }
 
-function updateSearchPlaceholder() {
-  const input = document.getElementById('searchInput');
-  input.placeholder = activeTab === 'challenges' ? 'Search challenge log...' : 'Search entries...';
-}
+function updateSearchPlaceholder() { document.getElementById('searchInput').placeholder=activeTab==='challenges'?'Search challenge log...':'Search entries...'; }
 
-function renderFeed(cards) {
-  document.getElementById('content').innerHTML = cards.length===0
-    ? `<div class="empty"><div class="empty-icon">◎</div><p style="font-weight:600;margin-bottom:6px">No entries yet</p><p style="font-size:12px">Hit Refresh to fetch the latest AI news.</p></div>`
-    : `<div class="cards">${cards.map(cardHTML).join('')}</div>`;
-}
+function renderFeed(cards) { document.getElementById('content').innerHTML=cards.length===0?`<div class="empty"><div class="empty-icon">◎</div><p style="font-weight:600;margin-bottom:6px">No entries yet</p><p style="font-size:12px">Hit Refresh to fetch the latest AI news.</p></div>`:`<div class="cards">${cards.map(cardHTML).join('')}</div>`; }
 
-function renderSections(cards) {
-  const sections = [
-    {label:'Daily Brief',icon:'🔥',filter:c=>c.priority==='High'},
-    {label:'Big Moves',icon:'⚡',filter:c=>c.category==='Big Move'},
-    {label:'Model Launches & Updates',icon:'🚀',filter:c=>c.category==='Model Launch'||c.category==='Capability Update'},
-    {label:'Agentic Progress',icon:'🤖',filter:c=>c.category==='Agentic Progress'},
-    {label:'Workflow Ideas',icon:'⚙️',filter:c=>c.category==='Workflow Idea'},
-    {label:'Hospitality',icon:'🍽️',filter:c=>c.hospitalityRelevance||c.category==='Hospitality Relevance'},
-    {label:'Coco & Daisy',icon:'🌸',filter:c=>c.cocoAndDaisy||c.category==='Coco & Daisy'},
-    {label:'Daily Challenge',icon:'🎯',filter:c=>c.source==='Daily Challenge'},
-    {label:'Notes',icon:'📝',filter:c=>c.category==='Note'&&c.source!=='Daily Challenge'},
-  ];
-  const seen = new Set();
-  document.getElementById('content').innerHTML = sections.map(s=>{
-    const items = cards.filter(s.filter).filter(c=>{ if(seen.has(c.id))return false; seen.add(c.id); return true; });
-    return `<div class="section-header"><span>${s.icon}</span><h2>${s.label}</h2>${items.length?`<span class="section-count">${items.length}</span>`:''}</div>${items.length===0?`<div class="empty" style="padding:16px 20px;margin-bottom:4px"><span style="font-size:12px">No entries yet</span></div>`:`<div class="cards" style="margin-bottom:8px">${items.map(cardHTML).join('')}</div>`}`;
-  }).join('');
-}
-
-function renderSpecial(cards, icon, title, desc) {
-  const unique = [...new Map(cards.map(c=>[c.id,c])).values()];
-  document.getElementById('content').innerHTML = `<div style="margin-bottom:16px"><div style="font-size:24px;margin-bottom:6px">${icon}</div><div style="font-size:15px;font-weight:600;margin-bottom:4px">${title}</div><div style="font-size:12px;color:var(--text-muted)">${desc}</div></div>${unique.length===0?`<div class="empty"><div class="empty-icon">${icon}</div><p style="font-weight:600;margin-bottom:6px">Nothing here yet</p><p style="font-size:12px">Hit Refresh — relevant items will appear automatically.</p></div>`:`<div class="cards">${unique.map(cardHTML).join('')}</div>`}`;
+function renderSpecial(cards,icon,title,desc) {
+  const unique=[...new Map(cards.map(c=>[c.id,c])).values()];
+  document.getElementById('content').innerHTML=`<div style="margin-bottom:20px"><div style="font-size:24px;margin-bottom:8px">${icon}</div><div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:600;margin-bottom:6px;color:var(--text)">${title}</div><div style="font-size:12px;color:var(--text-muted)">${desc}</div></div>${unique.length===0?`<div class="empty"><div class="empty-icon">${icon}</div><p style="font-weight:600;margin-bottom:6px">Nothing here yet</p><p style="font-size:12px">Hit Refresh — relevant items will appear automatically.</p></div>`:`<div class="cards">${unique.map(cardHTML).join('')}</div>`}`;
 }
 
 function renderChallengesTab() {
-  const entries = getFilteredChallenges();
-
-  document.getElementById('content').innerHTML = `
-    <div class="challenge-wrap">
-      <div class="challenge-panel">
-        <div class="challenge-title-row">
-          <div>
-            <h2>Log an AI Challenge</h2>
-            <p>Capture prompting tests, failures, takeaways, and next experiments.</p>
-          </div>
-        </div>
-
-        <form class="challenge-form" onsubmit="saveChallenge(event)">
-          <input id="challenge-title" class="challenge-input" type="text" placeholder="Challenge title" required>
-          <textarea id="challenge-prompt" class="challenge-textarea" placeholder="What prompt, workflow, or experiment did you try?"></textarea>
-          <textarea id="challenge-result" class="challenge-textarea" placeholder="What happened?"></textarea>
-          <textarea id="challenge-takeaway" class="challenge-textarea" placeholder="What did you learn, or what should you test next?"></textarea>
-          <input id="challenge-tags" class="challenge-input" type="text" placeholder="tags, comma, separated">
-          <button type="submit" class="challenge-save">Save Entry</button>
-          <div id="challenge-status" class="challenge-status"></div>
-        </form>
-      </div>
-
-      <div class="section-header">
-        <span>🧪</span>
-        <h2>Recent Experiments</h2>
-        ${entries.length ? `<span class="section-count">${entries.length}</span>` : ''}
-      </div>
-
-      ${
-        entries.length === 0
-          ? `<div class="empty"><div class="empty-icon">📝</div><p style="font-weight:600;margin-bottom:6px">No challenge entries yet</p><p style="font-size:12px">Use this tab to build a living log of prompting experiments.</p></div>`
-          : `<div class="challenge-list">${entries.map(challengeHTML).join('')}</div>`
-      }
-    </div>
-  `;
+  const entries=getFilteredChallenges();
+  document.getElementById('content').innerHTML=`<div class="challenge-wrap"><div class="challenge-panel"><div class="challenge-title-row"><div><h2>Log an AI Challenge</h2><p>Capture prompting tests, failures, takeaways, and next experiments.</p></div></div><form class="challenge-form" onsubmit="saveChallenge(event)"><input id="challenge-title" class="challenge-input" type="text" placeholder="Challenge title" required><textarea id="challenge-prompt" class="challenge-textarea" placeholder="What prompt, workflow, or experiment did you try?"></textarea><textarea id="challenge-result" class="challenge-textarea" placeholder="What happened?"></textarea><textarea id="challenge-takeaway" class="challenge-textarea" placeholder="What did you learn, or what should you test next?"></textarea><input id="challenge-tags" class="challenge-input" type="text" placeholder="tags, comma, separated"><button type="submit" class="challenge-save">Save Entry</button><div id="challenge-status" class="challenge-status"></div></form></div><div class="section-header"><span>🧪</span><h2>Recent Experiments</h2>${entries.length?`<span class="section-count">${entries.length}</span>`:''}</div>${entries.length===0?`<div class="empty"><div class="empty-icon">📝</div><p style="font-weight:600;margin-bottom:6px">No challenge entries yet</p><p style="font-size:12px">Use this tab to build a living log of prompting experiments.</p></div>`:`<div class="challenge-list">${entries.map(challengeHTML).join('')}</div>`}</div>`;
 }
 
-function challengeHTML(entry) {
-  return `
-    <div class="challenge-entry" id="challenge-${entry.id}">
-      <div class="challenge-entry-head">
-        <div class="challenge-entry-title">${escapeHtml(entry.title || 'Untitled')}</div>
-        <div class="challenge-entry-date">${fmtDateTime(entry.createdAt)}</div>
-      </div>
-
-      ${entry.prompt ? `<div class="challenge-entry-block"><div class="challenge-entry-label">Prompt / Setup</div><div class="challenge-entry-text">${escapeHtml(entry.prompt)}</div></div>` : ''}
-      ${entry.result ? `<div class="challenge-entry-block"><div class="challenge-entry-label">Result</div><div class="challenge-entry-text">${escapeHtml(entry.result)}</div></div>` : ''}
-      ${entry.takeaway ? `<div class="challenge-entry-block"><div class="challenge-entry-label">Takeaway</div><div class="challenge-entry-text">${escapeHtml(entry.takeaway)}</div></div>` : ''}
-
-      ${(entry.tags || []).length ? `<div class="challenge-tags">${entry.tags.map(t => `<span class="challenge-tag">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
-    </div>
-  `;
-}
+function challengeHTML(entry) { return `<div class="challenge-entry"><div class="challenge-entry-head"><div class="challenge-entry-title">${escapeHtml(entry.title||'Untitled')}</div><div class="challenge-entry-date">${fmtDateTime(entry.createdAt)}</div></div>${entry.prompt?`<div class="challenge-entry-block"><div class="challenge-entry-label">Prompt / Setup</div><div class="challenge-entry-text">${escapeHtml(entry.prompt)}</div></div>`:''} ${entry.result?`<div class="challenge-entry-block"><div class="challenge-entry-label">Result</div><div class="challenge-entry-text">${escapeHtml(entry.result)}</div></div>`:''} ${entry.takeaway?`<div class="challenge-entry-block"><div class="challenge-entry-label">Takeaway</div><div class="challenge-entry-text">${escapeHtml(entry.takeaway)}</div></div>`:''} ${(entry.tags||[]).length?`<div class="challenge-tags">${entry.tags.map(t=>`<span class="challenge-tag">#${escapeHtml(t)}</span>`).join('')}</div>`:''}</div>`; }
 
 async function saveChallenge(event) {
   event.preventDefault();
-
-  const statusEl = document.getElementById('challenge-status');
-  const titleEl = document.getElementById('challenge-title');
-  const promptEl = document.getElementById('challenge-prompt');
-  const resultEl = document.getElementById('challenge-result');
-  const takeawayEl = document.getElementById('challenge-takeaway');
-  const tagsEl = document.getElementById('challenge-tags');
-
-  statusEl.textContent = 'Saving entry...';
-
+  const statusEl=document.getElementById('challenge-status'); statusEl.textContent='Saving entry...';
   try {
-    const payload = {
-      title: titleEl.value,
-      prompt: promptEl.value,
-      result: resultEl.value,
-      takeaway: takeawayEl.value,
-      tags: tagsEl.value
-    };
-
-    const res = await fetch('/api/save-challenge', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.error || 'Failed to save challenge');
-
-    challengeEntries.unshift(data.entry);
-    challengeLastUpdated = new Date().toISOString();
-    renderAll();
-  } catch (e) {
-    console.error('Challenge save error:', e);
-    statusEl.textContent = 'Failed to save entry.';
-  }
+    const res=await fetch('/api/save-challenge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:document.getElementById('challenge-title').value,prompt:document.getElementById('challenge-prompt').value,result:document.getElementById('challenge-result').value,takeaway:document.getElementById('challenge-takeaway').value,tags:document.getElementById('challenge-tags').value})});
+    const data=await res.json();
+    if (!res.ok) throw new Error(data.error||'Failed');
+    challengeEntries.unshift(data.entry); challengeLastUpdated=new Date().toISOString(); renderAll();
+  } catch(e) { document.getElementById('challenge-status').textContent='Failed to save entry.'; }
 }
 
 function cardHTML(c) {
-  const key = CAT_MAP[c.category]||'note';
-  const cost = costBadge(c.accessCost);
-  return `<div class="card cat-${key}" id="card-${c.id}">
-    <div class="card-header" onclick="toggleCard('${c.id}')">
-      <div class="card-meta">
-        <div class="card-meta-left">
-          <span class="badge cb-${key}">${escapeHtml(c.category||'Note')}</span>
-          <span class="badge priority-${escapeHtml(c.priority||'Low')}">${escapeHtml(c.priority||'Low')}</span>
-          <span class="dot dot-${escapeHtml(c.status||'New')}"></span>
-        </div>
-        <div class="card-meta-right">
-          ${cost}
-          <span class="card-date">${fmtDate(c.dateAdded)}</span>
-        </div>
-      </div>
-      <div class="card-title">${escapeHtml(c.title||'Untitled')}</div>
-      <div class="card-summary">${escapeHtml(c.summary||'')}</div>
-      <div class="card-footer">
-        <span class="card-source">${escapeHtml(c.company||'')}${c.company && c.source ? ' · ' : ''}${escapeHtml(c.source||'')}</span>
-        <span class="expand-hint" id="hint-${c.id}">▼ more</span>
-      </div>
-    </div>
-    <div class="card-body" id="body-${c.id}">
-      ${c.whyItMatters?`<div class="card-section"><div class="section-label">Why It Matters</div><div class="section-text">${escapeHtml(c.whyItMatters)}</div></div>`:''}
-      ${c.shouldITest?`<div class="card-section"><div class="highlight-box" style="background:rgba(52,211,153,0.06);border-color:rgba(52,211,153,0.2)"><div class="section-label" style="color:var(--green)">Should I Test This?</div><div class="section-text" style="color:#a7f3d0">${escapeHtml(c.shouldITest)}</div></div></div>`:''}
-      ${c.workflowImpact?`<div class="card-section"><div class="section-label">Workflow Impact</div><div class="section-text">${escapeHtml(c.workflowImpact)}</div></div>`:''}
-      ${c.hospitalityRelevance?`<div class="card-section"><div class="highlight-box" style="background:rgba(249,115,22,0.06);border-color:rgba(249,115,22,0.2)"><div class="section-label" style="color:var(--orange)">Hospitality Relevance</div><div class="section-text" style="color:#fed7aa">${escapeHtml(c.hospitalityRelevance)}</div></div></div>`:''}
-      ${c.cocoAndDaisy?`<div class="card-section"><div class="highlight-box" style="background:rgba(236,72,153,0.06);border-color:rgba(236,72,153,0.2)"><div class="section-label" style="color:var(--pink)">🌸 Coco & Daisy</div><div class="section-text" style="color:#fbcfe8">${escapeHtml(c.cocoAndDaisy)}</div></div></div>`:''}
-      ${(c.tags||[]).length?`<div class="tags">${c.tags.map(t=>`<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>`:''}
-      <div class="card-actions">
-        <select class="status-select" onchange="updateStatus('${c.id}',this.value)">
-          ${['New','Reviewing','Tested','Archived'].map(s=>`<option${c.status===s?' selected':''}>${s}</option>`).join('')}
-        </select>
-        ${c.externalLink?`<a href="${escapeAttr(c.externalLink)}" target="_blank" class="action-link">View source ↗</a>`:''}
-      </div>
-    </div>
-  </div>`;
+  const key=CAT_MAP[c.category]||'note'; const cost=costBadge(c.accessCost);
+  return `<div class="card cat-${key}" id="card-${c.id}"><div class="card-header" onclick="toggleCard('${c.id}')"><div class="card-meta"><div class="card-meta-left"><span class="badge cb-${key}">${escapeHtml(c.category||'Note')}</span><span class="badge priority-${escapeHtml(c.priority||'Low')}">${escapeHtml(c.priority||'Low')}</span><span class="dot dot-${escapeHtml(c.status||'New')}"></span></div><div class="card-meta-right">${cost}<span class="card-date">${fmtDate(c.dateAdded)}</span></div></div><div class="card-title">${escapeHtml(c.title||'Untitled')}</div><div class="card-summary">${escapeHtml(c.summary||'')}</div><div class="card-footer"><span class="card-source">${escapeHtml(c.company||'')}${c.company&&c.source?' · ':''}${escapeHtml(c.source||'')}</span><span class="expand-hint" id="hint-${c.id}">▼ more</span></div></div><div class="card-body" id="body-${c.id}">${c.whyItMatters?`<div class="card-section"><div class="section-label">Why It Matters</div><div class="section-text">${escapeHtml(c.whyItMatters)}</div></div>`:''} ${c.shouldITest?`<div class="card-section"><div class="highlight-box" style="background:#F0FDF4;border-color:#BBF7D0"><div class="section-label" style="color:var(--green)">Should I Test This?</div><div class="section-text" style="color:#166534">${escapeHtml(c.shouldITest)}</div></div></div>`:''} ${c.workflowImpact?`<div class="card-section"><div class="section-label">Workflow Impact</div><div class="section-text">${escapeHtml(c.workflowImpact)}</div></div>`:''} ${c.hospitalityRelevance?`<div class="card-section"><div class="highlight-box" style="background:#FFF7ED;border-color:#FED7AA"><div class="section-label" style="color:var(--orange)">🍽️ Hospitality</div><div class="section-text" style="color:#9A3412">${escapeHtml(c.hospitalityRelevance)}</div></div></div>`:''} ${c.cocoAndDaisy?`<div class="card-section"><div class="highlight-box" style="background:#FDF2F8;border-color:#FBCFE8"><div class="section-label" style="color:var(--pink)">🌸 Coco & Daisy</div><div class="section-text" style="color:#9D174D">${escapeHtml(c.cocoAndDaisy)}</div></div></div>`:''} ${(c.tags||[]).length?`<div class="tags">${c.tags.map(t=>`<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>`:''}<div class="card-actions"><select class="status-select" onchange="updateStatus('${c.id}',this.value)">${['New','Reviewing','Tested','Archived'].map(s=>`<option${c.status===s?' selected':''}>${s}</option>`).join('')}</select>${c.externalLink?`<a href="${escapeAttr(c.externalLink)}" target="_blank" class="action-link">View source ↗</a>`:''}</div></div></div>`;
 }
 
-function toggleCard(id) {
-  const body = document.getElementById(`body-${id}`);
-  const hint = document.getElementById(`hint-${id}`);
-  hint.textContent = body.classList.toggle('open') ? '▲ less' : '▼ more';
-}
-
-function updateStatus(id, status) {
-  allCards = allCards.map(c=>c.id===id?{...c,status}:c);
-  saveLocal();
-}
-
-async function setTab(tab, el) {
-  activeTab = tab;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-
-  if (tab === 'challenges') {
-    await loadChallenges();
-  }
-
-  renderAll();
-}
-
-function setFilter(key, val) {
-  filters[key]=val;
-  renderAll();
-}
-
-function fmtDate(d) {
-  if (!d) return '';
-  return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-}
-
-function fmtDateTime(d) {
-  if (!d) return '';
-  const date = new Date(d);
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' +
-         date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-}
-
-function isToday(entry) {
-  if (!entry.createdAt) return false;
-  const d = new Date(entry.createdAt);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() &&
-         d.getMonth() === now.getMonth() &&
-         d.getDate() === now.getDate();
-}
-
-function isThisWeek(entry) {
-  if (!entry.createdAt) return false;
-  const now = new Date();
-  const d = new Date(entry.createdAt);
-  const diff = now - d;
-  return diff >= 0 && diff <= 7 * 24 * 60 * 60 * 1000;
-}
-
-function saveLocal() {
-  try {
-    localStorage.setItem('signal-status', JSON.stringify(allCards.reduce((a,c)=>{a[c.id]=c.status;return a},{})));
-  } catch(e){}
-}
-
-function applyLocalOverrides() {
-  try {
-    const o = JSON.parse(localStorage.getItem('signal-status')||'{}');
-    allCards = allCards.map(c=>o[c.id]?{...c,status:o[c.id]}:c);
-  } catch(e){}
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
-    .replace(/\n/g, '<br>');
-}
-
-function escapeAttr(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
+function toggleCard(id) { const body=document.getElementById(`body-${id}`); const hint=document.getElementById(`hint-${id}`); hint.textContent=body.classList.toggle('open')?'▲ less':'▼ more'; }
+function updateStatus(id,status) { allCards=allCards.map(c=>c.id===id?{...c,status}:c); saveLocal(); }
+async function setTab(tab,el) { activeTab=tab; document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); if(tab==='challenges') await loadChallenges(); renderAll(); }
+function setFilter(key,val) { filters[key]=val; renderAll(); }
+function fmtDate(d) { if(!d)return''; return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function fmtDateTime(d) { if(!d)return''; const date=new Date(d); return date.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' · '+date.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }
+function isToday(e) { if(!e.createdAt)return false; const d=new Date(e.createdAt),n=new Date(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate(); }
+function isThisWeek(e) { if(!e.createdAt)return false; const diff=new Date()-new Date(e.createdAt); return diff>=0&&diff<=7*24*60*60*1000; }
+function saveLocal() { try{localStorage.setItem('signal-status',JSON.stringify(allCards.reduce((a,c)=>{a[c.id]=c.status;return a},{})));}catch(e){} }
+function applyLocalOverrides() { try{const o=JSON.parse(localStorage.getItem('signal-status')||'{}');allCards=allCards.map(c=>o[c.id]?{...c,status:o[c.id]}:c);}catch(e){} }
+function escapeHtml(v) { return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;').replace(/\n/g,'<br>'); }
+function escapeAttr(v) { return String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 loadCards();
+loadTodayChallenge();
 </script>
 </body>
 </html>
