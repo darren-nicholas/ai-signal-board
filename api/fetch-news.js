@@ -90,7 +90,7 @@ ${JSON.stringify(articles, null, 2)}`;
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 3000,
+      max_tokens: 8000,
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -104,7 +104,8 @@ ${JSON.stringify(articles, null, 2)}`;
   const text = data.content[0].text.trim();
   const jsonMatch = text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) throw new Error("No JSON array found in Claude response");
-  return JSON.parse(jsonMatch[0]);
+  const cleaned = jsonMatch[0].replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+return JSON.parse(cleaned);
 }
 
 async function saveToUpstash(cards) {
